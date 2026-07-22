@@ -691,6 +691,18 @@
             <label class="form-field">Kennwort
               <input class="text-input" id="syncPassword" type="password" maxlength="100" autocomplete="current-password" placeholder="mindestens 4 Zeichen">
             </label>
+            <details class="storage-mode-note">
+              <summary><strong>Cloudflare Access Service Token</strong> (optional)</summary>
+              <p style="margin:.55rem 0">Damit kann die App den geschützten Sync-Dienst ohne OTP erreichen. Die Angaben bleiben nur auf diesem Gerät gespeichert und werden nicht exportiert.</p>
+              <div class="form-grid">
+                <label class="form-field">Client ID
+                  <input class="text-input" id="cloudflareClientId" type="password" maxlength="200" autocapitalize="none" autocomplete="off" placeholder="…access">
+                </label>
+                <label class="form-field">Client Secret
+                  <input class="text-input" id="cloudflareClientSecret" type="password" maxlength="300" autocapitalize="none" autocomplete="off" placeholder="Cloudflare Secret">
+                </label>
+              </div>
+            </details>
             <div class="setting-toggle-row">
               <div class="setting-toggle-copy"><strong>Automatisch synchronisieren</strong><span>Nach Änderungen und beim Öffnen der App. Offline bleibt alles lokal nutzbar.</span></div>
               <label class="switch" aria-label="Automatisch synchronisieren"><input id="autoSyncToggle" type="checkbox"><span class="switch-track" aria-hidden="true"></span></label>
@@ -779,7 +791,7 @@
   (() => {
     'use strict';
 
-    const APP_VERSION = '1.4.0';
+    const APP_VERSION = '1.4.1';
     const STORAGE_KEY = 'yatzy-duell-v2';
     const DEVICE_KEY = 'yatzy-duell-device-v1';
     const BONUS_LIMIT = 63;
@@ -917,7 +929,7 @@
     }
 
     function defaultDeviceSettings() {
-      return { storageMode: 'local', syncUrl: '', syncCode: '', syncPassword: '', autoSync: true, gameMode: false, lastSyncAt: null };
+      return { storageMode: 'local', syncUrl: '', syncCode: '', syncPassword: '', cloudflareClientId: '', cloudflareClientSecret: '', autoSync: true, gameMode: false, lastSyncAt: null };
     }
     function loadDeviceSettings() {
       try {
@@ -1248,7 +1260,7 @@
       state.settings.players.forEach((name,i)=>{if($(`settingsName${i}`))$(`settingsName${i}`).value=name});
       $('keepScreenAwakeToggle').checked=state.settings.keepScreenAwake!==false;
       $('storageModeSelect').value=deviceSettings.storageMode;
-      $('syncUrl').value=deviceSettings.syncUrl||''; $('syncCode').value=deviceSettings.syncCode||''; $('syncPassword').value=deviceSettings.syncPassword||''; $('autoSyncToggle').checked=deviceSettings.autoSync!==false;
+      $('syncUrl').value=deviceSettings.syncUrl||''; $('syncCode').value=deviceSettings.syncCode||''; $('syncPassword').value=deviceSettings.syncPassword||''; $('cloudflareClientId').value=deviceSettings.cloudflareClientId||''; $('cloudflareClientSecret').value=deviceSettings.cloudflareClientSecret||''; $('autoSyncToggle').checked=deviceSettings.autoSync!==false;
       const mode=deviceSettings.storageMode;
       $('filePanel').classList.toggle('hidden',mode==='local');
       $('synologyPanel').classList.toggle('hidden',mode!=='synology');
@@ -1278,11 +1290,21 @@
     }
 
     function syncBase() { return (deviceSettings.syncUrl||location.origin).trim().replace(/\/+$/,''); }
-    function syncHeaders() { return {'Content-Type':'application/json','Authorization':`Bearer ${deviceSettings.syncPassword||''}`}; }
+    function cloudflareHeaders() {
+      const headers={};
+      if(deviceSettings.cloudflareClientId&&deviceSettings.cloudflareClientSecret){
+        headers['CF-Access-Client-Id']=deviceSettings.cloudflareClientId;
+        headers['CF-Access-Client-Secret']=deviceSettings.cloudflareClientSecret;
+      }
+      return headers;
+    }
+    function syncHeaders() { return {'Content-Type':'application/json','Authorization':`Bearer ${deviceSettings.syncPassword||''}`,...cloudflareHeaders()}; }
     function validateSyncSettings() {
       const code=(deviceSettings.syncCode||'').trim();
       if(!/^[A-Za-z0-9_-]{3,40}$/.test(code)){toast('Spielcode: 3–40 Zeichen, Buchstaben oder Zahlen');return false;}
       if((deviceSettings.syncPassword||'').length<4){toast('Kennwort muss mindestens 4 Zeichen haben');return false;}
+      const hasCfId=Boolean(deviceSettings.cloudflareClientId); const hasCfSecret=Boolean(deviceSettings.cloudflareClientSecret);
+      if(hasCfId!==hasCfSecret){toast('Cloudflare Client ID und Secret vollständig eingeben');return false;}
       try{new URL(syncBase())}catch{toast('Serveradresse ist ungültig');return false;}
       return true;
     }
@@ -1303,10 +1325,10 @@
       if(deviceSettings.lastSyncAt){setSyncStatus(`Zuletzt synchronisiert: ${formatDate(deviceSettings.lastSyncAt)}`,'var(--success)');return;}
       setSyncStatus('Noch nicht synchronisiert','var(--warning)');
     }
-    function readSyncForm() { deviceSettings.syncUrl=$('syncUrl').value.trim();deviceSettings.syncCode=$('syncCode').value.trim();deviceSettings.syncPassword=$('syncPassword').value;deviceSettings.autoSync=$('autoSyncToggle').checked;saveDeviceSettings(); }
+    function readSyncForm() { deviceSettings.syncUrl=$('syncUrl').value.trim();deviceSettings.syncCode=$('syncCode').value.trim();deviceSettings.syncPassword=$('syncPassword').value;deviceSettings.cloudflareClientId=$('cloudflareClientId').value.trim();deviceSettings.cloudflareClientSecret=$('cloudflareClientSecret').value.trim();deviceSettings.autoSync=$('autoSyncToggle').checked;saveDeviceSettings(); }
     async function testSync() {
       readSyncForm(); if(!validateSyncSettings())return; setSyncStatus('Verbindung wird geprüft …','var(--accent)');
-      try{const response=await fetch(`${syncBase()}/api/health`,{headers:{'Accept':'application/json'}});if(!response.ok)throw new Error();setSyncStatus('Sync-Dienst ist erreichbar','var(--success)');toast('Verbindung erfolgreich')}catch{setSyncStatus('Sync-Dienst nicht erreichbar','var(--danger)');toast('Verbindung fehlgeschlagen')}
+      try{const response=await fetch(`${syncBase()}/api/health`,{headers:{'Accept':'application/json',...cloudflareHeaders()},cache:'no-store'});if(!response.ok)throw new Error();setSyncStatus('Sync-Dienst ist erreichbar','var(--success)');toast('Verbindung erfolgreich')}catch{setSyncStatus('Sync-Dienst nicht erreichbar','var(--danger)');toast('Verbindung fehlgeschlagen')}
     }
     async function syncNow({silent=false}={}) {
       if(syncInProgress)return false; readSyncForm(); if(!validateSyncSettings())return false;
@@ -1374,7 +1396,7 @@
     $('undoButton').addEventListener('click',undo);$('shareButton').addEventListener('click',shareCurrent);$('manualSyncButton').addEventListener('click',()=>syncNow());$('reopenButton').addEventListener('click',reopenCurrentGame);$('enterGameModeButton').addEventListener('click',()=>setGameMode(true));
     $('saveNamesButton').addEventListener('click',saveNames);$('keepScreenAwakeToggle').addEventListener('change',e=>setWakeLockPreference(e.target.checked));
     $('storageModeSelect').addEventListener('change',e=>setStorageMode(e.target.value));$('exportButton').addEventListener('click',exportData);$('importButton').addEventListener('click',()=>$('importFile').click());$('importFile').addEventListener('change',e=>{const file=e.target.files?.[0];if(file)importData(file)});
-    ['syncUrl','syncCode','syncPassword'].forEach(id=>$(id).addEventListener('change',readSyncForm));$('autoSyncToggle').addEventListener('change',()=>{readSyncForm();if(deviceSettings.autoSync)scheduleSync()});$('testSyncButton').addEventListener('click',testSync);$('syncNowButton').addEventListener('click',()=>syncNow());
+    ['syncUrl','syncCode','syncPassword','cloudflareClientId','cloudflareClientSecret'].forEach(id=>$(id).addEventListener('change',readSyncForm));$('autoSyncToggle').addEventListener('change',()=>{readSyncForm();if(deviceSettings.autoSync)scheduleSync()});$('testSyncButton').addEventListener('click',testSync);$('syncNowButton').addEventListener('click',()=>syncNow());
     $('deleteAllButton').addEventListener('click',deleteAllData);$('historyDetailClose').addEventListener('click',()=>$('historyDialog').close());$('historyDetailShare').addEventListener('click',shareHistoryDetail);
     $('confirmCancel').addEventListener('click',()=>{confirmAction=null;$('confirmDialog').close()});$('confirmOk').addEventListener('click',()=>{const action=confirmAction;confirmAction=null;$('confirmDialog').close();if(action)action()});
     document.querySelectorAll('input[name="playerCount"]').forEach(input=>input.addEventListener('change',refreshNewGameDialog));document.querySelectorAll('.new-name').forEach(input=>input.addEventListener('input',refreshNewGameDialog));
