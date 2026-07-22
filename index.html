@@ -1,395 +1,572 @@
 <!doctype html>
-<html lang="de">
+<html lang="de-CH">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f4f7fb">
+  <meta name="theme-color" content="#f2f5fa">
   <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Yatzy">
-  <meta name="description" content="Ein übersichtlicher Yatzy-Punkteblock für zwei Spieler.">
-  <title>Yatzy Punkteblock</title>
-<style>
-:root {
-  color-scheme: light dark;
-  --bg: #f3f6fb;
-  --panel: #ffffff;
-  --panel-soft: #f7f9fc;
-  --text: #101828;
-  --muted: #667085;
-  --line: #e1e7ef;
-  --accent: #1769e8;
-  --accent-strong: #0b57d0;
-  --accent-soft: #eaf2ff;
-  --success: #14833b;
-  --success-soft: #edf9f0;
-  --danger: #c51f46;
-  --shadow: 0 14px 40px rgba(15, 23, 42, .08);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
-}
+  <meta name="apple-mobile-web-app-title" content="Yatzy Duell">
+  <meta name="description" content="Yatzy-Punkteblock für zwei Spieler mit Historie und Statistik.">
+  <title>Yatzy Duell</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f2f5fa;
+      --panel: #ffffff;
+      --panel-soft: #f7f9fc;
+      --text: #101828;
+      --muted: #667085;
+      --line: #dfe6ef;
+      --accent: #1769e8;
+      --accent-strong: #0b57d0;
+      --accent-soft: #eaf2ff;
+      --success: #198754;
+      --success-soft: #edf9f1;
+      --warning: #b36b00;
+      --warning-soft: #fff6df;
+      --danger: #c73555;
+      --danger-soft: #fff0f3;
+      --p1: #1769e8;
+      --p2: #8a3ffc;
+      --shadow: 0 16px 42px rgba(15, 23, 42, .09);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    }
 
-* { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0;
-  min-height: 100svh;
-  background:
-    radial-gradient(circle at 10% -10%, rgba(23, 105, 232, .14), transparent 34rem),
-    var(--bg);
-  color: var(--text);
-  padding-bottom: calc(.8rem + env(safe-area-inset-bottom));
-}
-button, input, select { font: inherit; }
-button { -webkit-tap-highlight-color: transparent; }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100svh;
+      background:
+        radial-gradient(circle at 15% -10%, rgba(23, 105, 232, .15), transparent 32rem),
+        radial-gradient(circle at 105% 10%, rgba(138, 63, 252, .09), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      padding-bottom: calc(5.6rem + env(safe-area-inset-bottom));
+    }
+    button, input, select { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent);
+      outline-offset: 2px;
+    }
+    .hidden { display: none !important; }
 
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: grid;
-  grid-template-columns: 44px 1fr 44px;
-  gap: .72rem;
-  align-items: center;
-  padding: calc(.7rem + env(safe-area-inset-top)) .85rem .7rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(20px) saturate(1.2);
-}
-.brand-mark {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-  background: linear-gradient(145deg, #2b7cf4, #0758d4);
-  color: white;
-  box-shadow: 0 9px 22px rgba(23, 105, 232, .26);
-  font-size: 1.45rem;
-}
-.brand-copy h1 { margin: 0; font-size: 1.08rem; letter-spacing: .16em; }
-.brand-copy p { margin: .08rem 0 0; color: var(--muted); font-size: .73rem; }
-.icon-button, .close-button {
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--panel);
-  color: var(--accent);
-  box-shadow: 0 5px 18px rgba(15, 23, 42, .06);
-  font-size: 1.25rem;
-}
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      display: grid;
+      grid-template-columns: 46px 1fr 46px;
+      align-items: center;
+      gap: .72rem;
+      padding: calc(.65rem + env(safe-area-inset-top)) .8rem .65rem;
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      border-bottom: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+      backdrop-filter: blur(20px) saturate(1.25);
+    }
+    .brand-mark {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background: linear-gradient(145deg, #2c7cf4, #0758d4);
+      color: white;
+      box-shadow: 0 9px 24px rgba(23, 105, 232, .28);
+      font-size: 1.45rem;
+    }
+    .brand-copy h1 { margin: 0; font-size: 1.06rem; letter-spacing: .16em; }
+    .brand-copy p { margin: .08rem 0 0; color: var(--muted); font-size: .72rem; }
+    .icon-button {
+      width: 46px;
+      height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--panel);
+      color: var(--accent);
+      box-shadow: 0 5px 18px rgba(15, 23, 42, .06);
+      font-size: 1.15rem;
+    }
 
-main { width: min(100%, 780px); margin: 0 auto; padding: .85rem .55rem 1rem; }
-.status-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: .8rem;
-  margin: 0 .15rem .72rem;
-  padding: .82rem .92rem;
-  border: 1px solid #d5e5ff;
-  border-radius: 18px;
-  background: linear-gradient(135deg, var(--accent-soft), var(--panel));
-}
-.status-card > div:first-child { display: grid; gap: .12rem; }
-.eyebrow {
-  color: var(--accent);
-  font-size: .69rem;
-  font-weight: 850;
-  letter-spacing: .075em;
-  text-transform: uppercase;
-}
-.status-card strong { font-size: 1.08rem; }
-.status-score { color: var(--accent-strong); font-size: 1.08rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+    main { width: min(100%, 820px); margin: 0 auto; padding: .82rem .52rem 1rem; }
+    .page { display: none; animation: fadeIn .16s ease; }
+    .page.active { display: block; }
+    @keyframes fadeIn { from { opacity: .25; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 
-.scorecard {
-  overflow: clip;
-  border: 1px solid var(--line);
-  border-radius: 19px;
-  background: var(--panel);
-  box-shadow: var(--shadow);
-}
-.grid-row {
-  display: grid;
-  grid-template-columns: minmax(128px, 1.55fr) repeat(2, minmax(74px, 1fr));
-}
-.grid-row > * {
-  min-width: 0;
-  min-height: 46px;
-  display: flex;
-  align-items: center;
-  padding: .34rem .48rem;
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-}
-.grid-row > *:last-child { border-right: 0; }
-.grid-header {
-  position: sticky;
-  top: calc(58px + env(safe-area-inset-top));
-  z-index: 20;
-  background: color-mix(in srgb, var(--panel) 94%, transparent);
-  backdrop-filter: blur(14px);
-}
-.grid-header > * { min-height: 61px; }
-.category-title {
-  color: var(--muted);
-  font-size: .72rem;
-  font-weight: 850;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-.player-header {
-  flex-direction: column;
-  justify-content: center;
-  gap: .08rem;
-  text-align: center;
-  cursor: pointer;
-}
-.player-header small { color: var(--muted); font-size: .64rem; }
-.player-header strong {
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--accent);
-  font-size: .9rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.section-row > * { min-height: 36px; background: var(--panel-soft); }
-.section-row > :first-child {
-  color: var(--accent);
-  font-size: .72rem;
-  font-weight: 900;
-  letter-spacing: .065em;
-  text-transform: uppercase;
-}
-.category-cell { justify-content: space-between; gap: .35rem; font-size: .83rem; line-height: 1.15; }
-.category-cell .dice-face { color: var(--muted); font-size: 1.18rem; }
-.score-cell { justify-content: center; padding: .28rem !important; }
-.score-button {
-  width: 100%;
-  min-height: 36px;
-  border: 1px solid #d7deea;
-  border-radius: 11px;
-  background: var(--panel-soft);
-  color: var(--muted);
-  font-weight: 850;
-  font-variant-numeric: tabular-nums;
-}
-.score-button.is-filled { background: var(--panel); color: var(--text); border-color: #c9d6e8; }
-.score-button.is-zero { color: var(--muted); text-decoration: line-through; }
-.score-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent); border-color: var(--accent); }
-.total-row > *, .bonus-row > *, .grand-row > * { font-weight: 860; }
-.total-row > * { background: var(--panel-soft); }
-.bonus-row > * { color: var(--success); background: var(--success-soft); }
-.grand-row > * { min-height: 54px; border-top: 2px solid var(--text); border-bottom: 0; font-size: 1rem; }
-.calculated { justify-content: center; font-variant-numeric: tabular-nums; }
-.grand-row .calculated { color: var(--accent); font-size: 1.18rem; }
+    .hero-card {
+      display: grid;
+      gap: .52rem;
+      margin: 0 .12rem .72rem;
+      padding: .88rem .95rem;
+      border: 1px solid #d3e3ff;
+      border-radius: 19px;
+      background: linear-gradient(135deg, var(--accent-soft), var(--panel));
+    }
+    .hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: .8rem; }
+    .eyebrow { color: var(--accent); font-size: .67rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .hero-title { margin-top: .12rem; font-size: 1.1rem; font-weight: 900; }
+    .hero-score { color: var(--accent-strong); font-size: 1.08rem; font-weight: 950; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: .4rem .75rem; color: var(--muted); font-size: .73rem; }
+    .hero-meta strong { color: var(--text); }
+    .inline-button {
+      border: 0;
+      border-radius: 10px;
+      padding: .42rem .62rem;
+      background: var(--accent);
+      color: white;
+      font-size: .72rem;
+      font-weight: 850;
+    }
 
-.progress-card {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: .36rem .7rem;
-  margin: .75rem .15rem 0;
-  padding: .75rem .85rem;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--panel);
-}
-.progress-card > div:nth-child(1), .progress-card > div:nth-child(3) { display: contents; }
-.progress-card span { overflow: hidden; color: var(--muted); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
-.progress-card strong { font-size: .75rem; font-variant-numeric: tabular-nums; }
-.progress-track { grid-column: 1 / -1; height: 5px; overflow: hidden; border-radius: 999px; background: var(--line); }
-.progress-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--accent); transition: width .2s ease; }
-.storage-note { margin: .56rem .35rem; color: var(--muted); font-size: .72rem; line-height: 1.4; }
-.action-row { display: grid; grid-template-columns: 1fr .75fr 1.2fr; gap: .5rem; margin-top: .72rem; }
-.button {
-  min-height: 45px;
-  border: 0;
-  border-radius: 13px;
-  padding: .7rem .75rem;
-  font-weight: 850;
-}
-.button.primary { background: var(--accent); color: white; box-shadow: 0 8px 20px rgba(23, 105, 232, .18); }
-.button.secondary { border: 1px solid #ccd6e5; background: var(--panel); color: var(--accent); }
-.button.danger { background: var(--danger); color: white; }
-.button:disabled { opacity: .4; }
-.full-width { width: 100%; }
+    .scorecard {
+      overflow: clip;
+      border: 1px solid var(--line);
+      border-radius: 19px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .grid-row { display: grid; grid-template-columns: minmax(126px, 1.58fr) repeat(2, minmax(76px, 1fr)); }
+    .grid-row > * {
+      min-width: 0;
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      padding: .33rem .46rem;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .grid-row > *:last-child { border-right: 0; }
+    .grid-header {
+      position: sticky;
+      top: calc(59px + env(safe-area-inset-top));
+      z-index: 24;
+      background: color-mix(in srgb, var(--panel) 94%, transparent);
+      backdrop-filter: blur(15px);
+    }
+    .grid-header > * { min-height: 62px; }
+    .category-title { color: var(--muted); font-size: .7rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+    .player-header { flex-direction: column; justify-content: center; gap: .06rem; text-align: center; }
+    .player-header .starter-dot { color: var(--warning); font-size: .64rem; font-weight: 900; min-height: .78rem; }
+    .player-header strong { max-width: 100%; overflow: hidden; color: var(--accent); font-size: .88rem; text-overflow: ellipsis; white-space: nowrap; }
+    .player-header:nth-child(3) strong { color: var(--p2); }
+    .player-header small { color: var(--muted); font-size: .62rem; }
+    .section-row > * { min-height: 36px; background: var(--panel-soft); }
+    .section-row > :first-child { color: var(--accent); font-size: .7rem; font-weight: 900; letter-spacing: .065em; text-transform: uppercase; }
+    .category-cell { justify-content: space-between; gap: .35rem; font-size: .81rem; line-height: 1.15; }
+    .category-cell .dice-face { color: var(--muted); font-size: 1.17rem; }
+    .score-cell { justify-content: center; padding: .27rem !important; }
+    .score-button {
+      width: 100%;
+      min-height: 36px;
+      border: 1px solid #d4dce8;
+      border-radius: 11px;
+      background: var(--panel-soft);
+      color: var(--muted);
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+    .score-button.is-filled { background: var(--panel); color: var(--text); border-color: #c4d3e8; }
+    .score-button.is-zero { color: var(--muted); text-decoration: line-through; }
+    .score-button:disabled { opacity: .72; cursor: default; }
+    .total-row > *, .bonus-row > *, .grand-row > * { font-weight: 900; }
+    .total-row > * { background: var(--panel-soft); }
+    .bonus-row > * { color: var(--success); background: var(--success-soft); }
+    .grand-row > * { min-height: 55px; border-top: 2px solid var(--text); border-bottom: 0; font-size: .96rem; }
+    .calculated { justify-content: center; font-variant-numeric: tabular-nums; }
+    .grand-row .calculated { color: var(--accent); font-size: 1.18rem; }
+    .grand-row .calculated:last-child { color: var(--p2); }
 
+    .progress-card {
+      display: grid;
+      gap: .48rem;
+      margin: .75rem .12rem 0;
+      padding: .78rem .85rem;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: var(--panel);
+    }
+    .progress-line { display: grid; grid-template-columns: 1fr auto; gap: .5rem; align-items: center; }
+    .progress-line span { overflow: hidden; color: var(--muted); font-size: .74rem; text-overflow: ellipsis; white-space: nowrap; }
+    .progress-line strong { font-size: .73rem; font-variant-numeric: tabular-nums; }
+    .progress-track { grid-column: 1 / -1; height: 5px; overflow: hidden; border-radius: 999px; background: var(--line); }
+    .progress-track > span { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--p1); transition: width .2s ease; }
+    .progress-line:nth-child(2) .progress-track > span { background: var(--p2); }
+    .storage-note { margin: .55rem .3rem; color: var(--muted); font-size: .71rem; line-height: 1.4; }
+    .action-row { display: grid; grid-template-columns: 1fr .8fr 1.15fr; gap: .5rem; margin-top: .72rem; }
 
-dialog {
-  width: min(92vw, 430px);
-  max-height: 90svh;
-  border: 0;
-  border-radius: 22px;
-  padding: 0;
-  background: var(--panel);
-  color: var(--text);
-  box-shadow: 0 30px 90px rgba(0, 0, 0, .34);
-}
-dialog::backdrop { background: rgba(15, 23, 42, .48); backdrop-filter: blur(4px); }
-.sheet-dialog { width: min(100%, 520px); margin: auto auto 0; border-radius: 24px 24px 0 0; }
-.sheet { display: grid; gap: .86rem; padding: .5rem .95rem calc(1rem + env(safe-area-inset-bottom)); }
-.sheet-handle { width: 42px; height: 5px; margin: 0 auto .15rem; border-radius: 999px; background: var(--line); }
-.sheet-title-row { display: flex; align-items: center; justify-content: space-between; gap: .8rem; }
-.sheet-title-row h2, .modal-card h2 { margin: .1rem 0 0; font-size: 1.2rem; }
-.close-button { box-shadow: none; background: var(--panel-soft); color: var(--muted); }
-.score-input-label { color: var(--muted); font-size: .76rem; font-weight: 800; }
-.score-input {
-  width: 100%;
-  height: 64px;
-  border: 1px solid #cdd8e8;
-  border-radius: 16px;
-  background: var(--panel-soft);
-  color: var(--text);
-  text-align: center;
-  font-size: 1.65rem;
-  font-weight: 900;
-  outline: none;
-  -moz-appearance: textfield;
-}
-.score-input::-webkit-inner-spin-button { display: none; }
-.score-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent); }
-.quick-values { display: flex; flex-wrap: wrap; gap: .45rem; min-height: 1px; }
-.quick-value {
-  min-width: 45px;
-  min-height: 38px;
-  padding: .4rem .65rem;
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  background: var(--panel-soft);
-  color: var(--accent);
-  font-weight: 850;
-}
-.sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
-.three-actions { grid-template-columns: .85fr .95fr 1.2fr; }
-.modal-card { display: grid; gap: .85rem; padding: 1.05rem; }
-.modal-card label { display: grid; gap: .35rem; color: var(--muted); font-size: .77rem; font-weight: 800; }
-.modal-card input, .modal-card select {
-  width: 100%;
-  min-height: 46px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: .65rem .72rem;
-  background: var(--panel-soft);
-  color: var(--text);
-}
-.compact-modal { text-align: center; }
-.compact-modal p { margin: -.25rem 0 .2rem; color: var(--muted); line-height: 1.45; }
-.confirm-icon { display: grid; place-items: center; width: 52px; height: 52px; margin: 0 auto; border-radius: 16px; background: var(--accent-soft); color: var(--accent); font-size: 1.5rem; }
-.toast {
-  position: fixed;
-  left: 50%;
-  bottom: calc(1rem + env(safe-area-inset-bottom));
-  z-index: 100;
-  transform: translate(-50%, 120px);
-  opacity: 0;
-  max-width: calc(100vw - 2rem);
-  padding: .72rem 1rem;
-  border-radius: 13px;
-  background: #101828;
-  color: white;
-  box-shadow: 0 12px 35px rgba(0, 0, 0, .24);
-  font-size: .8rem;
-  font-weight: 750;
-  transition: .22s ease;
-}
-.toast.show { transform: translate(-50%, 0); opacity: 1; }
+    .button {
+      min-height: 45px;
+      border: 0;
+      border-radius: 13px;
+      padding: .7rem .72rem;
+      font-weight: 900;
+    }
+    .button.primary { background: var(--accent); color: white; box-shadow: 0 8px 20px rgba(23, 105, 232, .18); }
+    .button.secondary { border: 1px solid #ccd6e5; background: var(--panel); color: var(--accent); }
+    .button.danger { background: var(--danger); color: white; }
+    .button.soft-danger { border: 1px solid #f1bcc8; background: var(--danger-soft); color: var(--danger); }
+    .button:disabled { opacity: .42; cursor: default; }
+    .full-width { width: 100%; }
 
-@media (max-width: 390px) {
-  main { padding-left: .32rem; padding-right: .32rem; }
-  .grid-row { grid-template-columns: minmax(119px, 1.42fr) repeat(2, minmax(71px, 1fr)); }
-  .grid-row > * { padding-left: .34rem; padding-right: .34rem; }
-  .category-cell { font-size: .78rem; }
-  .category-cell .dice-face { font-size: 1.05rem; }
-  .player-header strong { font-size: .83rem; }
-  .action-row { grid-template-columns: 1fr 1fr; }
-  .action-row .primary { grid-column: 1 / -1; }
-}
+    .section-title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: .8rem; margin: .25rem .18rem .6rem; }
+    .section-title-row h2 { margin: 0; font-size: 1.28rem; }
+    .section-title-row p { margin: .12rem 0 0; color: var(--muted); font-size: .75rem; }
+    .pill { display: inline-flex; align-items: center; gap: .3rem; border-radius: 999px; padding: .38rem .58rem; background: var(--accent-soft); color: var(--accent); font-size: .7rem; font-weight: 850; }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #080c13;
-    --panel: #111722;
-    --panel-soft: #171e2a;
-    --text: #f6f8fb;
-    --muted: #9aa5b5;
-    --line: #2a3444;
-    --accent: #5a9fff;
-    --accent-strong: #82b6ff;
-    --accent-soft: #10294d;
-    --success: #63d884;
-    --success-soft: #10281a;
-    --shadow: 0 14px 40px rgba(0, 0, 0, .24);
-  }
-  body { background: radial-gradient(circle at 10% -10%, rgba(53, 126, 238, .16), transparent 30rem), var(--bg); }
-  .status-card { border-color: #234b7f; }
-  .score-button { border-color: #354154; }
-  .button.secondary { border-color: #3a4658; }
-}
+    .empty-card, .panel-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: 0 8px 26px rgba(15, 23, 42, .055);
+    }
+    .empty-card { padding: 1.45rem 1rem; text-align: center; color: var(--muted); }
+    .empty-card strong { display: block; margin-bottom: .28rem; color: var(--text); }
+    .panel-card { padding: .9rem; margin-bottom: .7rem; }
+    .panel-card h3 { margin: 0 0 .62rem; font-size: .96rem; }
 
-</style>
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .58rem; }
+    .stat-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      padding: .78rem;
+      box-shadow: 0 7px 22px rgba(15, 23, 42, .045);
+    }
+    .stat-card .label { color: var(--muted); font-size: .68rem; font-weight: 800; }
+    .stat-card .value { margin-top: .2rem; font-size: 1.3rem; font-weight: 950; font-variant-numeric: tabular-nums; }
+    .stat-card .sub { margin-top: .16rem; color: var(--muted); font-size: .66rem; }
+    .player-stat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .6rem; }
+    .player-chip { display: inline-flex; align-items: center; gap: .38rem; font-weight: 900; }
+    .player-chip::before { content: ""; width: .66rem; height: .66rem; border-radius: 50%; background: var(--p1); }
+    .player-chip.p2::before { background: var(--p2); }
+    .metric-list { display: grid; gap: .45rem; }
+    .metric-row { display: grid; grid-template-columns: 1fr auto; gap: .7rem; align-items: center; padding-bottom: .42rem; border-bottom: 1px solid var(--line); font-size: .78rem; }
+    .metric-row:last-child { padding-bottom: 0; border-bottom: 0; }
+    .metric-row span { color: var(--muted); }
+    .metric-row strong { font-variant-numeric: tabular-nums; }
+
+    .duel-score { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: .65rem; padding: .4rem 0 .75rem; text-align: center; }
+    .duel-score .name { overflow: hidden; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+    .duel-score .wins { font-size: 1.8rem; font-weight: 950; font-variant-numeric: tabular-nums; }
+    .duel-score .separator { color: var(--muted); font-weight: 900; }
+
+    .chart-wrap { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--panel-soft); padding: .55rem; }
+    .chart-wrap svg { display: block; width: 100%; height: 180px; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: .65rem; margin-top: .48rem; color: var(--muted); font-size: .69rem; }
+    .legend-item { display: inline-flex; align-items: center; gap: .3rem; }
+    .legend-dot { width: .62rem; height: .62rem; border-radius: 50%; background: var(--p1); }
+    .legend-dot.p2 { background: var(--p2); }
+
+    .category-stats { overflow-x: auto; }
+    .category-table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: .74rem; }
+    .category-table th, .category-table td { padding: .55rem .45rem; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; }
+    .category-table th:first-child, .category-table td:first-child { text-align: left; }
+    .category-table th { color: var(--muted); font-size: .66rem; }
+
+    .history-list { display: grid; gap: .62rem; }
+    .history-card { border: 1px solid var(--line); border-radius: 17px; background: var(--panel); overflow: clip; box-shadow: 0 7px 22px rgba(15, 23, 42, .045); }
+    .history-main { display: grid; grid-template-columns: 1fr auto; gap: .75rem; align-items: center; padding: .82rem .88rem; }
+    .history-date { color: var(--muted); font-size: .68rem; }
+    .history-title { margin-top: .16rem; font-weight: 900; }
+    .history-meta { margin-top: .2rem; color: var(--muted); font-size: .69rem; }
+    .history-score { text-align: right; font-size: 1.1rem; font-weight: 950; font-variant-numeric: tabular-nums; }
+    .history-score small { display: block; margin-top: .12rem; color: var(--muted); font-size: .62rem; font-weight: 700; }
+    .history-actions { display: grid; grid-template-columns: 1fr auto; border-top: 1px solid var(--line); }
+    .history-actions button { min-height: 40px; border: 0; background: var(--panel-soft); color: var(--accent); font-weight: 850; }
+    .history-actions button:last-child { width: 52px; border-left: 1px solid var(--line); color: var(--danger); }
+
+    .settings-list { display: grid; gap: .72rem; }
+    .settings-card { border: 1px solid var(--line); border-radius: 18px; background: var(--panel); padding: .88rem; }
+    .settings-card h3 { margin: 0 0 .25rem; font-size: .94rem; }
+    .settings-card p { margin: 0 0 .7rem; color: var(--muted); font-size: .72rem; line-height: 1.4; }
+    .form-grid { display: grid; gap: .58rem; }
+    label.form-field { display: grid; gap: .3rem; color: var(--muted); font-size: .72rem; font-weight: 800; }
+    .text-input, .select-input {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: .65rem .72rem;
+      background: var(--panel-soft);
+      color: var(--text);
+    }
+    .button-stack { display: grid; gap: .5rem; }
+
+    .bottom-nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 50;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding: .38rem .35rem calc(.38rem + env(safe-area-inset-bottom));
+      border-top: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      backdrop-filter: blur(20px) saturate(1.25);
+    }
+    .nav-button {
+      min-height: 50px;
+      display: grid;
+      place-items: center;
+      gap: .08rem;
+      border: 0;
+      border-radius: 12px;
+      background: transparent;
+      color: var(--muted);
+      font-size: .64rem;
+      font-weight: 800;
+    }
+    .nav-button span:first-child { font-size: 1.1rem; line-height: 1; }
+    .nav-button.active { background: var(--accent-soft); color: var(--accent); }
+
+    dialog {
+      width: min(92vw, 460px);
+      max-height: 90svh;
+      border: 0;
+      border-radius: 22px;
+      padding: 0;
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: 0 30px 90px rgba(0, 0, 0, .34);
+    }
+    dialog::backdrop { background: rgba(15, 23, 42, .48); backdrop-filter: blur(4px); }
+    .sheet-dialog { width: min(100%, 540px); margin: auto auto 0; border-radius: 24px 24px 0 0; }
+    .sheet { display: grid; gap: .82rem; padding: .5rem .95rem calc(1rem + env(safe-area-inset-bottom)); }
+    .sheet-handle { width: 42px; height: 5px; margin: 0 auto .15rem; border-radius: 999px; background: var(--line); }
+    .sheet-title-row { display: flex; align-items: center; justify-content: space-between; gap: .8rem; }
+    .sheet-title-row h2, .modal-card h2 { margin: .1rem 0 0; font-size: 1.2rem; }
+    .close-button { width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 13px; background: var(--panel-soft); color: var(--muted); font-size: 1.1rem; }
+    .score-input-label { color: var(--muted); font-size: .75rem; font-weight: 800; }
+    .score-input {
+      width: 100%;
+      height: 64px;
+      border: 1px solid #cdd8e8;
+      border-radius: 16px;
+      background: var(--panel-soft);
+      color: var(--text);
+      text-align: center;
+      font-size: 1.65rem;
+      font-weight: 950;
+      outline: none;
+      -moz-appearance: textfield;
+    }
+    .score-input::-webkit-inner-spin-button { display: none; }
+    .quick-values { display: flex; flex-wrap: wrap; gap: .43rem; min-height: 1px; }
+    .quick-value { min-width: 45px; min-height: 38px; padding: .4rem .62rem; border: 1px solid var(--line); border-radius: 11px; background: var(--panel-soft); color: var(--accent); font-weight: 850; }
+    .sheet-actions { display: grid; grid-template-columns: .85fr .95fr 1.2fr; gap: .5rem; }
+    .modal-card { display: grid; gap: .82rem; padding: 1rem; }
+    .modal-card p { margin: -.3rem 0 .1rem; color: var(--muted); font-size: .75rem; line-height: 1.45; }
+    .radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+    .radio-card { position: relative; }
+    .radio-card input { position: absolute; opacity: 0; pointer-events: none; }
+    .radio-card span { min-height: 52px; display: grid; place-items: center; padding: .6rem; border: 1px solid var(--line); border-radius: 13px; background: var(--panel-soft); text-align: center; font-size: .78rem; font-weight: 850; }
+    .radio-card input:checked + span { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+    .summary-icon { width: 62px; height: 62px; display: grid; place-items: center; margin: 0 auto; border-radius: 19px; background: var(--warning-soft); font-size: 1.8rem; }
+    .summary-score { text-align: center; font-size: 2rem; font-weight: 950; font-variant-numeric: tabular-nums; }
+    .summary-winner { text-align: center; font-size: 1.08rem; font-weight: 900; }
+    .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .52rem; }
+    .summary-tile { border: 1px solid var(--line); border-radius: 13px; padding: .65rem; background: var(--panel-soft); text-align: center; }
+    .summary-tile small { display: block; color: var(--muted); font-size: .65rem; }
+    .summary-tile strong { display: block; margin-top: .16rem; font-size: .92rem; }
+    .detail-scorecard { max-height: 56svh; overflow: auto; border: 1px solid var(--line); border-radius: 14px; }
+    .detail-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr; }
+    .detail-row > * { padding: .45rem .5rem; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: .72rem; }
+    .detail-row > *:last-child { border-right: 0; text-align: right; }
+    .detail-row > *:nth-child(2) { text-align: right; }
+    .detail-row:last-child > * { border-bottom: 0; font-weight: 900; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(5.7rem + env(safe-area-inset-bottom));
+      z-index: 100;
+      transform: translate(-50%, 120px);
+      opacity: 0;
+      max-width: calc(100vw - 2rem);
+      padding: .72rem 1rem;
+      border-radius: 13px;
+      background: #101828;
+      color: white;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, .24);
+      font-size: .78rem;
+      font-weight: 750;
+      transition: .22s ease;
+    }
+    .toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+    @media (max-width: 390px) {
+      main { padding-left: .3rem; padding-right: .3rem; }
+      .grid-row { grid-template-columns: minmax(118px, 1.45fr) repeat(2, minmax(70px, 1fr)); }
+      .grid-row > * { padding-left: .33rem; padding-right: .33rem; }
+      .category-cell { font-size: .77rem; }
+      .action-row { grid-template-columns: 1fr 1fr; }
+      .action-row .primary { grid-column: 1 / -1; }
+      .stats-grid { gap: .45rem; }
+      .stat-card { padding: .68rem; }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #080c13;
+        --panel: #111722;
+        --panel-soft: #171e2a;
+        --text: #f6f8fb;
+        --muted: #99a5b5;
+        --line: #2a3444;
+        --accent: #5a9fff;
+        --accent-strong: #82b6ff;
+        --accent-soft: #10294d;
+        --success: #62d487;
+        --success-soft: #10281a;
+        --warning: #ffc45c;
+        --warning-soft: #35270d;
+        --danger: #ff8099;
+        --danger-soft: #36151d;
+        --p1: #5a9fff;
+        --p2: #b58cff;
+        --shadow: 0 16px 42px rgba(0, 0, 0, .26);
+      }
+      body { background: radial-gradient(circle at 15% -10%, rgba(53, 126, 238, .17), transparent 30rem), var(--bg); }
+      .hero-card { border-color: #244b7d; }
+      .score-button { border-color: #354154; }
+      .button.secondary { border-color: #3a4658; }
+      .toast { background: #f5f7fb; color: #101828; }
+    }
+  </style>
 </head>
 <body>
   <header class="topbar">
-    <div class="brand-mark" aria-hidden="true">
-      <span>⚄</span>
-    </div>
+    <div class="brand-mark" aria-hidden="true">⚄</div>
     <div class="brand-copy">
       <h1>YATZY</h1>
-      <p>Punkteblock für zwei</p>
+      <p>Duell für zwei</p>
     </div>
-    <button class="icon-button" id="settingsButton" type="button" aria-label="Einstellungen öffnen">
-      <span aria-hidden="true">⚙︎</span>
-    </button>
+    <button class="icon-button" id="quickNewButton" type="button" aria-label="Neues Spiel">＋</button>
   </header>
 
   <main>
-    <section class="status-card" aria-live="polite">
-      <div>
-        <span class="eyebrow">Aktueller Stand</span>
-        <strong id="leaderName">Noch offen</strong>
+    <section class="page active" id="page-game" data-page="game">
+      <section class="hero-card" aria-live="polite">
+        <div class="hero-top">
+          <div>
+            <div class="eyebrow" id="gameStatusLabel">Aktueller Stand</div>
+            <div class="hero-title" id="leaderName">Noch offen</div>
+          </div>
+          <div class="hero-score" id="leaderScore">0 : 0</div>
+        </div>
+        <div class="hero-meta">
+          <span>Start: <strong id="starterName">Spieler 1</strong></span>
+          <span>Bonus: <strong>25 ab 63</strong></span>
+          <button class="inline-button hidden" id="reopenButton" type="button">Korrigieren</button>
+        </div>
+      </section>
+
+      <section class="scorecard" aria-label="Yatzy Punkteblock">
+        <div class="grid-row grid-header" id="playerHeader">
+          <div class="category-title">Kategorie</div>
+          <div class="player-header" data-player="0"><span class="starter-dot" id="starterDot0"></span><strong id="headerName0">Spieler 1</strong><small id="headerTotal0">0 Punkte</small></div>
+          <div class="player-header" data-player="1"><span class="starter-dot" id="starterDot1"></span><strong id="headerName1">Spieler 2</strong><small id="headerTotal1">0 Punkte</small></div>
+        </div>
+        <div id="scoreRows"></div>
+      </section>
+
+      <section class="progress-card" aria-label="Spielfortschritt">
+        <div class="progress-line">
+          <span id="progressName0">Spieler 1</span><strong id="progressText0">0 / 15</strong>
+          <div class="progress-track"><span id="progressBar0"></span></div>
+        </div>
+        <div class="progress-line">
+          <span id="progressName1">Spieler 2</span><strong id="progressText1">0 / 15</strong>
+          <div class="progress-track"><span id="progressBar1"></span></div>
+        </div>
+      </section>
+
+      <p class="storage-note">Die aktuelle Partie, Historie und Statistik werden automatisch auf diesem Gerät gespeichert.</p>
+
+      <div class="action-row">
+        <button class="button secondary" id="undoButton" type="button" disabled>↶ Rückgängig</button>
+        <button class="button secondary" id="shareButton" type="button">Teilen</button>
+        <button class="button primary" id="newGameButton" type="button">Neue Runde</button>
       </div>
-      <div class="status-score" id="leaderScore">0 : 0</div>
     </section>
 
-    <section class="scorecard" aria-label="Yatzy Punkteblock">
-      <div class="grid-row grid-header" id="playerHeader">
-        <div class="category-title">Kategorie</div>
+    <section class="page" id="page-stats" data-page="stats">
+      <div class="section-title-row">
+        <div><h2>Statistik</h2><p>Aus allen abgeschlossenen Partien</p></div>
+        <span class="pill" id="gamesCountPill">0 Spiele</span>
       </div>
-      <div id="scoreRows"></div>
+      <div id="statsContent"></div>
     </section>
 
-    <section class="progress-card" aria-label="Spielfortschritt">
-      <div><span id="progressName0">Spieler 1</span><strong id="progress0">0 / 15</strong></div>
-      <div class="progress-track"><span id="progressBar0"></span></div>
-      <div><span id="progressName1">Spieler 2</span><strong id="progress1">0 / 15</strong></div>
-      <div class="progress-track"><span id="progressBar1"></span></div>
+    <section class="page" id="page-history" data-page="history">
+      <div class="section-title-row">
+        <div><h2>Verlauf</h2><p>Komplette Spielzettel und Resultate</p></div>
+        <span class="pill" id="historyCountPill">0</span>
+      </div>
+      <div id="historyContent"></div>
     </section>
 
-    <p class="storage-note">Die Punkte werden automatisch nur in diesem Browser gespeichert.</p>
+    <section class="page" id="page-settings" data-page="settings">
+      <div class="section-title-row">
+        <div><h2>Einstellungen</h2><p>Spieler und gespeicherte Daten</p></div>
+      </div>
+      <div class="settings-list">
+        <section class="settings-card">
+          <h3>Spielernamen</h3>
+          <p>Die Namen gelten für die aktuelle Partie und alle neuen Partien. Alte Einträge behalten ihre damaligen Namen.</p>
+          <div class="form-grid">
+            <label class="form-field">Spieler 1<input class="text-input" id="settingsName0" maxlength="24" autocomplete="off"></label>
+            <label class="form-field">Spieler 2<input class="text-input" id="settingsName1" maxlength="24" autocomplete="off"></label>
+            <button class="button primary full-width" id="saveNamesButton" type="button">Namen speichern</button>
+          </div>
+        </section>
 
-    <div class="action-row">
-      <button class="button secondary" id="undoButton" type="button" disabled>↶ Rückgängig</button>
-      <button class="button secondary" id="shareButton" type="button">Teilen</button>
-      <button class="button primary" id="newGameButton" type="button">Neue Runde</button>
-    </div>
+        <section class="settings-card">
+          <h3>Daten sichern</h3>
+          <p>Exportiere alle Spiele als JSON-Datei. Diese Datei kann später auf demselben oder einem anderen Gerät wieder importiert werden.</p>
+          <div class="button-stack">
+            <button class="button secondary full-width" id="exportButton" type="button">Daten exportieren</button>
+            <button class="button secondary full-width" id="importButton" type="button">Daten importieren</button>
+            <input class="hidden" id="importFile" type="file" accept="application/json,.json">
+          </div>
+        </section>
+
+        <section class="settings-card">
+          <h3>Alle Daten löschen</h3>
+          <p>Löscht die aktuelle Partie, die gesamte Historie und alle Statistiken von diesem Gerät.</p>
+          <button class="button soft-danger full-width" id="deleteAllButton" type="button">Alle Daten löschen</button>
+        </section>
+
+        <section class="settings-card">
+          <h3>Regeln</h3>
+          <p>Der Bonus ist fest auf <strong>25 Punkte ab 63 Punkten</strong> im oberen Teil eingestellt. Beide Spieler sind immer gemeinsam auf einer Seite sichtbar.</p>
+        </section>
+      </div>
+    </section>
   </main>
 
+  <nav class="bottom-nav" aria-label="Navigation">
+    <button class="nav-button active" data-target="game" type="button"><span>🎲</span><span>Spiel</span></button>
+    <button class="nav-button" data-target="stats" type="button"><span>📊</span><span>Statistik</span></button>
+    <button class="nav-button" data-target="history" type="button"><span>🕘</span><span>Verlauf</span></button>
+    <button class="nav-button" data-target="settings" type="button"><span>⚙️</span><span>Einstellungen</span></button>
+  </nav>
+
   <dialog id="scoreDialog" class="sheet-dialog">
-    <form method="dialog" class="sheet">
+    <form method="dialog" class="sheet" id="scoreForm">
       <div class="sheet-handle" aria-hidden="true"></div>
       <div class="sheet-title-row">
-        <div>
-          <span class="eyebrow" id="scorePlayerLabel">Spieler 1</span>
-          <h2 id="scoreCategoryLabel">Einer</h2>
-        </div>
-        <button class="close-button" value="cancel" aria-label="Schließen">×</button>
+        <div><span class="eyebrow" id="scorePlayerLabel">Spieler 1</span><h2 id="scoreCategoryLabel">Einer</h2></div>
+        <button class="close-button" value="cancel" aria-label="Schliessen">×</button>
       </div>
       <label class="score-input-label" for="scoreInput">Punkte</label>
       <input id="scoreInput" class="score-input" type="number" inputmode="numeric" min="0" max="999" step="1" autocomplete="off" placeholder="0">
       <div class="quick-values" id="quickValues" aria-label="Schnellauswahl"></div>
-      <div class="sheet-actions three-actions">
+      <div class="sheet-actions">
         <button class="button secondary" id="clearScoreButton" type="button">Leeren</button>
         <button class="button secondary" id="zeroScoreButton" type="button">Streichen</button>
         <button class="button primary" id="saveScoreButton" type="button">Übernehmen</button>
@@ -397,413 +574,748 @@ dialog::backdrop { background: rgba(15, 23, 42, .48); backdrop-filter: blur(4px)
     </form>
   </dialog>
 
-  <dialog id="settingsDialog">
-    <form method="dialog" class="modal-card">
-      <div class="sheet-title-row">
-        <div><span class="eyebrow">Spiel</span><h2>Einstellungen</h2></div>
-        <button class="close-button" value="cancel" aria-label="Schließen">×</button>
+  <dialog id="newGameDialog">
+    <form method="dialog" class="modal-card" id="newGameForm">
+      <div class="sheet-title-row"><h2>Neue Runde</h2><button class="close-button" value="cancel" aria-label="Schliessen">×</button></div>
+      <p>Der vorgeschlagene Startspieler wechselt automatisch nach jeder begonnenen Runde.</p>
+      <div class="form-grid">
+        <label class="form-field">Spieler 1<input class="text-input" id="newName0" maxlength="24" autocomplete="off"></label>
+        <label class="form-field">Spieler 2<input class="text-input" id="newName1" maxlength="24" autocomplete="off"></label>
       </div>
-      <label>Spieler 1
-        <input id="playerName0" maxlength="18" autocomplete="off">
-      </label>
-      <label>Spieler 2
-        <input id="playerName1" maxlength="18" autocomplete="off">
-      </label>
-      <label>Bonus ab 63 Punkten
-        <select id="bonusSelect">
-          <option value="25">25 Punkte (Carlit-Block)</option>
-          <option value="35">35 Punkte</option>
-          <option value="50">50 Punkte</option>
-        </select>
-      </label>
-      <button class="button primary full-width" id="saveSettingsButton" type="button">Speichern</button>
+      <div>
+        <div class="score-input-label" style="margin-bottom:.38rem">Wer beginnt?</div>
+        <div class="radio-grid">
+          <label class="radio-card"><input type="radio" name="starter" value="0" id="starterRadio0"><span id="starterRadioLabel0">Spieler 1</span></label>
+          <label class="radio-card"><input type="radio" name="starter" value="1" id="starterRadio1"><span id="starterRadioLabel1">Spieler 2</span></label>
+        </div>
+      </div>
+      <button class="button primary full-width" id="startGameButton" type="button">Runde starten</button>
     </form>
+  </dialog>
+
+  <dialog id="summaryDialog">
+    <div class="modal-card">
+      <div class="summary-icon">🏆</div>
+      <div class="summary-winner" id="summaryWinner">Spiel beendet</div>
+      <div class="summary-score" id="summaryScore">0 : 0</div>
+      <div class="summary-grid" id="summaryGrid"></div>
+      <button class="button primary full-width" id="summaryNewGameButton" type="button">Nächste Runde</button>
+      <button class="button secondary full-width" id="summaryCloseButton" type="button">Schliessen</button>
+    </div>
+  </dialog>
+
+  <dialog id="historyDialog">
+    <div class="modal-card">
+      <div class="sheet-title-row"><div><span class="eyebrow" id="historyDetailDate"></span><h2 id="historyDetailTitle">Spiel</h2></div><button class="close-button" id="historyDetailClose" type="button" aria-label="Schliessen">×</button></div>
+      <div class="detail-scorecard" id="historyDetailTable"></div>
+      <button class="button secondary full-width" id="historyDetailShare" type="button">Resultat teilen</button>
+    </div>
   </dialog>
 
   <dialog id="confirmDialog">
-    <form method="dialog" class="modal-card compact-modal">
-      <span class="confirm-icon" aria-hidden="true">↻</span>
-      <h2>Neue Runde starten?</h2>
-      <p>Alle Punkte werden gelöscht. Die Spielernamen und Bonusregel bleiben erhalten.</p>
-      <div class="sheet-actions">
-        <button class="button secondary" value="cancel">Abbrechen</button>
-        <button class="button danger" value="confirm">Punkte löschen</button>
+    <div class="modal-card">
+      <div class="summary-icon" id="confirmIcon">⚠️</div>
+      <h2 id="confirmTitle" style="text-align:center">Bestätigen</h2>
+      <p id="confirmText" style="text-align:center"></p>
+      <div class="sheet-actions" style="grid-template-columns:1fr 1fr">
+        <button class="button secondary" id="confirmCancel" type="button">Abbrechen</button>
+        <button class="button danger" id="confirmOk" type="button">Löschen</button>
       </div>
-    </form>
+    </div>
   </dialog>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="toast" id="toast" role="status"></div>
 
   <script>
-(() => {
-  "use strict";
+    (() => {
+      'use strict';
 
-  const STORAGE_KEY = "yatzy-two-player-v4";
-  const CATEGORIES = [
-    { section: "Oberer Teil", id: "ones", label: "Einer", symbol: "⚀", quick: [0, 1, 2, 3, 4, 5] },
-    { section: "Oberer Teil", id: "twos", label: "Zweier", symbol: "⚁", quick: [0, 2, 4, 6, 8, 10] },
-    { section: "Oberer Teil", id: "threes", label: "Dreier", symbol: "⚂", quick: [0, 3, 6, 9, 12, 15] },
-    { section: "Oberer Teil", id: "fours", label: "Vierer", symbol: "⚃", quick: [0, 4, 8, 12, 16, 20] },
-    { section: "Oberer Teil", id: "fives", label: "Fünfer", symbol: "⚄", quick: [0, 5, 10, 15, 20, 25] },
-    { section: "Oberer Teil", id: "sixes", label: "Sechser", symbol: "⚅", quick: [0, 6, 12, 18, 24, 30] },
-    { section: "Unterer Teil", id: "onePair", label: "1 Paar", quick: [0] },
-    { section: "Unterer Teil", id: "twoPairs", label: "2 Paare", quick: [0] },
-    { section: "Unterer Teil", id: "threeKind", label: "Drei Gleiche", quick: [0] },
-    { section: "Unterer Teil", id: "fourKind", label: "Vier Gleiche", quick: [0] },
-    { section: "Unterer Teil", id: "smallStraight", label: "Kleine Straße", quick: [0, 15] },
-    { section: "Unterer Teil", id: "largeStraight", label: "Große Straße", quick: [0, 20] },
-    { section: "Unterer Teil", id: "fullHouse", label: "Volles Haus", quick: [0] },
-    { section: "Unterer Teil", id: "chance", label: "Chance", quick: [0] },
-    { section: "Unterer Teil", id: "yatzy", label: "YATZY", quick: [0, 50] }
-  ];
+      const STORAGE_KEY = 'yatzy-duell-v2';
+      const BONUS_LIMIT = 63;
+      const BONUS_POINTS = 25;
 
-  const upperIds = CATEGORIES.filter(item => item.section === "Oberer Teil").map(item => item.id);
-  const lowerIds = CATEGORIES.filter(item => item.section === "Unterer Teil").map(item => item.id);
-  const maxFields = CATEGORIES.length;
+      const upperCategories = [
+        { id: 'ones', label: 'Einer', face: '⚀', quick: [0, 1, 2, 3, 4, 5] },
+        { id: 'twos', label: 'Zweier', face: '⚁', quick: [0, 2, 4, 6, 8, 10] },
+        { id: 'threes', label: 'Dreier', face: '⚂', quick: [0, 3, 6, 9, 12, 15] },
+        { id: 'fours', label: 'Vierer', face: '⚃', quick: [0, 4, 8, 12, 16, 20] },
+        { id: 'fives', label: 'Fünfer', face: '⚄', quick: [0, 5, 10, 15, 20, 25] },
+        { id: 'sixes', label: 'Sechser', face: '⚅', quick: [0, 6, 12, 18, 24, 30] }
+      ];
+      const lowerCategories = [
+        { id: 'onePair', label: '1 Paar', quick: [0, 2, 4, 6, 8, 10, 12] },
+        { id: 'twoPairs', label: '2 Paar', quick: [0, 6, 8, 10, 12, 14, 16, 18, 20, 22] },
+        { id: 'threeKind', label: 'Drei Gleiche', quick: [0, 3, 6, 9, 12, 15, 18] },
+        { id: 'fourKind', label: 'Vier Gleiche', quick: [0, 4, 8, 12, 16, 20, 24] },
+        { id: 'smallStraight', label: 'Kleine Strasse', quick: [0, 15] },
+        { id: 'largeStraight', label: 'Grosse Strasse', quick: [0, 20] },
+        { id: 'fullHouse', label: 'Volles Haus', quick: [0, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28] },
+        { id: 'chance', label: 'Chance', quick: [0, 10, 15, 20, 25, 30] },
+        { id: 'yatzy', label: 'YATZY', quick: [0, 50] }
+      ];
+      const allCategories = [...upperCategories, ...lowerCategories];
+      const categoryMap = Object.fromEntries(allCategories.map(c => [c.id, c]));
 
-  let state = loadState();
-  let undoStack = [];
-  let activeEdit = null;
-  let toastTimer = null;
+      const $ = id => document.getElementById(id);
+      const clone = value => JSON.parse(JSON.stringify(value));
+      const nowId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const clampScore = value => {
+        const number = Number.parseInt(value, 10);
+        if (!Number.isFinite(number)) return null;
+        return Math.max(0, Math.min(999, number));
+      };
+      const safeName = (value, fallback) => String(value || '').trim().slice(0, 24) || fallback;
+      const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
 
-  const elements = {
-    playerHeader: document.getElementById("playerHeader"),
-    scoreRows: document.getElementById("scoreRows"),
-    leaderName: document.getElementById("leaderName"),
-    leaderScore: document.getElementById("leaderScore"),
-    progressName0: document.getElementById("progressName0"),
-    progressName1: document.getElementById("progressName1"),
-    progress0: document.getElementById("progress0"),
-    progress1: document.getElementById("progress1"),
-    progressBar0: document.getElementById("progressBar0"),
-    progressBar1: document.getElementById("progressBar1"),
-    undoButton: document.getElementById("undoButton"),
-    scoreDialog: document.getElementById("scoreDialog"),
-    scorePlayerLabel: document.getElementById("scorePlayerLabel"),
-    scoreCategoryLabel: document.getElementById("scoreCategoryLabel"),
-    scoreInput: document.getElementById("scoreInput"),
-    quickValues: document.getElementById("quickValues"),
-    settingsDialog: document.getElementById("settingsDialog"),
-    confirmDialog: document.getElementById("confirmDialog"),
-    toast: document.getElementById("toast")
-  };
-
-  function defaultState() {
-    return {
-      players: [
-        { name: "Spieler 1", scores: {} },
-        { name: "Spieler 2", scores: {} }
-      ],
-      bonusValue: 25
-    };
-  }
-
-  function loadState() {
-    try {
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (stored && Array.isArray(stored.players) && stored.players.length === 2) {
+      function makeNewState() {
         return {
-          ...defaultState(),
-          ...stored,
-          players: stored.players.map((player, index) => ({
-            name: String(player.name || `Spieler ${index + 1}`),
-            scores: player.scores && typeof player.scores === "object" ? player.scores : {}
-          }))
+          version: 2,
+          settings: { players: ['Spieler 1', 'Spieler 2'], nextStarter: 0 },
+          current: {
+            id: nowId(),
+            startedAt: new Date().toISOString(),
+            starter: 0,
+            players: ['Spieler 1', 'Spieler 2'],
+            scores: [{}, {}],
+            completed: false,
+            historyId: null
+          },
+          history: [],
+          undo: []
         };
       }
-    } catch (_) {
-      // Defekte Daten werden durch den Standardzustand ersetzt.
-    }
-    return defaultState();
-  }
 
-  function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }
-
-  function pushUndo() {
-    undoStack.push(JSON.stringify(state));
-    if (undoStack.length > 40) undoStack.shift();
-    elements.undoButton.disabled = false;
-  }
-
-  function isFilled(player, id) {
-    return Object.prototype.hasOwnProperty.call(player.scores, id) && player.scores[id] !== "";
-  }
-
-  function scoreValue(player, id) {
-    if (!isFilled(player, id)) return 0;
-    return Math.max(0, Number.parseInt(player.scores[id], 10) || 0);
-  }
-
-  function sumIds(player, ids) {
-    return ids.reduce((sum, id) => sum + scoreValue(player, id), 0);
-  }
-
-  function upperTotal(player) { return sumIds(player, upperIds); }
-  function upperBonus(player) { return upperTotal(player) >= 63 ? Number(state.bonusValue) : 0; }
-  function lowerTotal(player) { return sumIds(player, lowerIds); }
-  function grandTotal(player) { return upperTotal(player) + upperBonus(player) + lowerTotal(player); }
-  function completed(player) { return CATEGORIES.filter(category => isFilled(player, category.id)).length; }
-
-  function createCell(className, text = "") {
-    const cell = document.createElement("div");
-    cell.className = className;
-    cell.textContent = text;
-    return cell;
-  }
-
-  function render() {
-    renderHeader();
-    renderRows();
-    renderStatus();
-    renderProgress();
-  }
-
-  function renderHeader() {
-    elements.playerHeader.innerHTML = "";
-    elements.playerHeader.appendChild(createCell("category-title", "Kategorie"));
-    state.players.forEach((player, index) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "player-header";
-      button.innerHTML = `<small>Spieler ${index + 1}</small><strong>${escapeHtml(player.name)}</strong>`;
-      button.addEventListener("click", openSettings);
-      elements.playerHeader.appendChild(button);
-    });
-  }
-
-  function renderRows() {
-    elements.scoreRows.innerHTML = "";
-    let currentSection = "";
-
-    CATEGORIES.forEach(category => {
-      if (category.section !== currentSection) {
-        currentSection = category.section;
-        elements.scoreRows.appendChild(sectionRow(currentSection));
+      function normalizeState(raw) {
+        const fallback = makeNewState();
+        if (!raw || typeof raw !== 'object') return fallback;
+        const players = Array.isArray(raw.settings?.players) ? raw.settings.players : fallback.settings.players;
+        const currentPlayers = Array.isArray(raw.current?.players) ? raw.current.players : players;
+        return {
+          version: 2,
+          settings: {
+            players: [safeName(players[0], 'Spieler 1'), safeName(players[1], 'Spieler 2')],
+            nextStarter: raw.settings?.nextStarter === 1 ? 1 : 0
+          },
+          current: {
+            id: String(raw.current?.id || nowId()),
+            startedAt: raw.current?.startedAt || new Date().toISOString(),
+            starter: raw.current?.starter === 1 ? 1 : 0,
+            players: [safeName(currentPlayers[0], 'Spieler 1'), safeName(currentPlayers[1], 'Spieler 2')],
+            scores: [
+              raw.current?.scores?.[0] && typeof raw.current.scores[0] === 'object' ? raw.current.scores[0] : {},
+              raw.current?.scores?.[1] && typeof raw.current.scores[1] === 'object' ? raw.current.scores[1] : {}
+            ],
+            completed: Boolean(raw.current?.completed),
+            historyId: raw.current?.historyId || null
+          },
+          history: Array.isArray(raw.history) ? raw.history.filter(Boolean) : [],
+          undo: Array.isArray(raw.undo) ? raw.undo.slice(-30) : []
+        };
       }
-      elements.scoreRows.appendChild(scoreRow(category));
 
-      if (category.id === "sixes") {
-        elements.scoreRows.appendChild(calculationRow("Summe", upperTotal, "total-row"));
-        elements.scoreRows.appendChild(calculationRow(`Bonus ab 63 (+${state.bonusValue})`, upperBonus, "bonus-row"));
-        elements.scoreRows.appendChild(calculationRow("Summe oben", player => upperTotal(player) + upperBonus(player), "total-row"));
+      function loadState() {
+        try {
+          return normalizeState(JSON.parse(localStorage.getItem(STORAGE_KEY)));
+        } catch {
+          return makeNewState();
+        }
       }
-    });
 
-    elements.scoreRows.appendChild(calculationRow("Summe unten", lowerTotal, "total-row"));
-    elements.scoreRows.appendChild(calculationRow("Gesamtsumme", grandTotal, "grand-row"));
-  }
+      let state = loadState();
+      let activeEdit = null;
+      let activeHistoryId = null;
+      let confirmAction = null;
+      let toastTimer = null;
 
-  function sectionRow(title) {
-    const row = document.createElement("div");
-    row.className = "grid-row section-row";
-    row.appendChild(createCell("", title));
-    row.appendChild(createCell(""));
-    row.appendChild(createCell(""));
-    return row;
-  }
-
-  function scoreRow(category) {
-    const row = document.createElement("div");
-    row.className = "grid-row";
-
-    const categoryCell = document.createElement("div");
-    categoryCell.className = "category-cell";
-    categoryCell.innerHTML = `<span>${escapeHtml(category.label)}</span>${category.symbol ? `<span class="dice-face" aria-hidden="true">${category.symbol}</span>` : ""}`;
-    row.appendChild(categoryCell);
-
-    state.players.forEach((player, playerIndex) => {
-      const wrapper = document.createElement("div");
-      wrapper.className = "score-cell";
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "score-button";
-      const filled = isFilled(player, category.id);
-      const value = filled ? scoreValue(player, category.id) : null;
-      button.textContent = filled ? String(value) : "–";
-      button.classList.toggle("is-filled", filled);
-      button.classList.toggle("is-zero", filled && value === 0);
-      button.setAttribute("aria-label", `${category.label}, ${player.name}: ${filled ? value : "leer"}`);
-      button.addEventListener("click", () => openScoreDialog(playerIndex, category));
-      wrapper.appendChild(button);
-      row.appendChild(wrapper);
-    });
-
-    return row;
-  }
-
-  function calculationRow(label, calculator, className) {
-    const row = document.createElement("div");
-    row.className = `grid-row ${className}`;
-    row.appendChild(createCell("", label));
-    state.players.forEach(player => row.appendChild(createCell("calculated", String(calculator(player)))));
-    return row;
-  }
-
-  function renderStatus() {
-    const totals = state.players.map(grandTotal);
-    elements.leaderScore.textContent = `${totals[0]} : ${totals[1]}`;
-    if (totals[0] === totals[1]) {
-      elements.leaderName.textContent = totals[0] === 0 ? "Noch offen" : "Gleichstand";
-      return;
-    }
-    elements.leaderName.textContent = totals[0] > totals[1] ? `${state.players[0].name} führt` : `${state.players[1].name} führt`;
-  }
-
-  function renderProgress() {
-    state.players.forEach((player, index) => {
-      const count = completed(player);
-      elements[`progressName${index}`].textContent = player.name;
-      elements[`progress${index}`].textContent = `${count} / ${maxFields}`;
-      elements[`progressBar${index}`].style.width = `${(count / maxFields) * 100}%`;
-    });
-  }
-
-  function openScoreDialog(playerIndex, category) {
-    activeEdit = { playerIndex, category };
-    const player = state.players[playerIndex];
-    elements.scorePlayerLabel.textContent = player.name;
-    elements.scoreCategoryLabel.textContent = category.label;
-    elements.scoreInput.value = isFilled(player, category.id) ? String(scoreValue(player, category.id)) : "";
-    elements.quickValues.innerHTML = "";
-    category.quick.forEach(value => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "quick-value";
-      button.textContent = String(value);
-      button.addEventListener("click", () => {
-        elements.scoreInput.value = String(value);
-        saveActiveScore();
-      });
-      elements.quickValues.appendChild(button);
-    });
-    elements.scoreDialog.showModal();
-    setTimeout(() => {
-      elements.scoreInput.focus();
-      elements.scoreInput.select();
-    }, 80);
-  }
-
-  function saveActiveScore(valueOverride) {
-    if (!activeEdit) return;
-    let raw = valueOverride ?? elements.scoreInput.value.trim();
-    if (raw === "") return;
-    const next = Math.min(999, Math.max(0, Number.parseInt(raw, 10) || 0));
-    const player = state.players[activeEdit.playerIndex];
-    if (isFilled(player, activeEdit.category.id) && scoreValue(player, activeEdit.category.id) === next) {
-      elements.scoreDialog.close();
-      return;
-    }
-    pushUndo();
-    player.scores[activeEdit.category.id] = String(next);
-    saveState();
-    elements.scoreDialog.close();
-    render();
-  }
-
-  function clearActiveScore() {
-    if (!activeEdit) return;
-    const player = state.players[activeEdit.playerIndex];
-    if (!isFilled(player, activeEdit.category.id)) {
-      elements.scoreDialog.close();
-      return;
-    }
-    pushUndo();
-    delete player.scores[activeEdit.category.id];
-    saveState();
-    elements.scoreDialog.close();
-    render();
-  }
-
-  function openSettings() {
-    document.getElementById("playerName0").value = state.players[0].name;
-    document.getElementById("playerName1").value = state.players[1].name;
-    document.getElementById("bonusSelect").value = String(state.bonusValue);
-    elements.settingsDialog.showModal();
-  }
-
-  function saveSettings() {
-    const name0 = document.getElementById("playerName0").value.trim() || "Spieler 1";
-    const name1 = document.getElementById("playerName1").value.trim() || "Spieler 2";
-    const bonusValue = Number(document.getElementById("bonusSelect").value) || 25;
-    if (name0 !== state.players[0].name || name1 !== state.players[1].name || bonusValue !== state.bonusValue) {
-      pushUndo();
-      state.players[0].name = name0;
-      state.players[1].name = name1;
-      state.bonusValue = bonusValue;
-      saveState();
-    }
-    elements.settingsDialog.close();
-    render();
-  }
-
-  function undo() {
-    const previous = undoStack.pop();
-    if (!previous) return;
-    state = JSON.parse(previous);
-    saveState();
-    elements.undoButton.disabled = undoStack.length === 0;
-    render();
-    showToast("Letzte Änderung rückgängig");
-  }
-
-  async function shareScore() {
-    const totals = state.players.map(grandTotal);
-    const text = `Yatzy – ${state.players[0].name}: ${totals[0]} Punkte, ${state.players[1].name}: ${totals[1]} Punkte.`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "Yatzy Spielstand", text });
-      } else {
-        await navigator.clipboard.writeText(text);
-        showToast("Spielstand kopiert");
+      function saveState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       }
-    } catch (error) {
-      if (error && error.name !== "AbortError") showToast("Teilen war nicht möglich");
-    }
-  }
 
-  function showToast(message) {
-    clearTimeout(toastTimer);
-    elements.toast.textContent = message;
-    elements.toast.classList.add("show");
-    toastTimer = setTimeout(() => elements.toast.classList.remove("show"), 1900);
-  }
+      function totalsFor(scores) {
+        const upper = upperCategories.reduce((sum, c) => sum + (hasOwn(scores, c.id) ? Number(scores[c.id]) || 0 : 0), 0);
+        const bonus = upper >= BONUS_LIMIT ? BONUS_POINTS : 0;
+        const lower = lowerCategories.reduce((sum, c) => sum + (hasOwn(scores, c.id) ? Number(scores[c.id]) || 0 : 0), 0);
+        const filled = allCategories.reduce((sum, c) => sum + (hasOwn(scores, c.id) ? 1 : 0), 0);
+        return { upper, bonus, lower, total: upper + bonus + lower, filled };
+      }
 
-  function escapeHtml(value) {
-    return String(value).replace(/[&<>'"]/g, character => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
-    })[character]);
-  }
+      function recordFromCurrent() {
+        const totals = state.current.scores.map(totalsFor);
+        const scores = clone(state.current.scores);
+        const winner = totals[0].total === totals[1].total ? null : (totals[0].total > totals[1].total ? 0 : 1);
+        return {
+          id: state.current.id,
+          startedAt: state.current.startedAt,
+          finishedAt: new Date().toISOString(),
+          starter: state.current.starter,
+          players: clone(state.current.players),
+          scores,
+          totals,
+          winner,
+          margin: Math.abs(totals[0].total - totals[1].total),
+          bonusPoints: BONUS_POINTS,
+          bonusLimit: BONUS_LIMIT
+        };
+      }
 
-  document.getElementById("settingsButton").addEventListener("click", openSettings);
-  document.getElementById("saveSettingsButton").addEventListener("click", saveSettings);
-  document.getElementById("saveScoreButton").addEventListener("click", () => saveActiveScore());
-  document.getElementById("zeroScoreButton").addEventListener("click", () => saveActiveScore("0"));
-  document.getElementById("clearScoreButton").addEventListener("click", clearActiveScore);
-  document.getElementById("undoButton").addEventListener("click", undo);
-  document.getElementById("shareButton").addEventListener("click", shareScore);
-  document.getElementById("newGameButton").addEventListener("click", () => elements.confirmDialog.showModal());
+      function renderScoreRows() {
+        const container = $('scoreRows');
+        const totals = state.current.scores.map(totalsFor);
+        const rows = [];
+        rows.push(sectionRow('Oberer Teil'));
+        upperCategories.forEach(c => rows.push(scoreRow(c)));
+        rows.push(calcRow('Summe oben', totals[0].upper, totals[1].upper, 'total-row'));
+        rows.push(calcRow(`Bonus (${BONUS_POINTS} ab ${BONUS_LIMIT})`, totals[0].bonus, totals[1].bonus, 'bonus-row'));
+        rows.push(sectionRow('Unterer Teil'));
+        lowerCategories.forEach(c => rows.push(scoreRow(c)));
+        rows.push(calcRow('Gesamtsumme', totals[0].total, totals[1].total, 'grand-row'));
+        container.innerHTML = rows.join('');
+        container.querySelectorAll('.score-button').forEach(button => {
+          button.addEventListener('click', () => openScoreDialog(Number(button.dataset.player), button.dataset.category));
+        });
+      }
 
-  elements.scoreInput.addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      saveActiveScore();
-    }
-  });
+      function sectionRow(label) {
+        return `<div class="grid-row section-row"><div>${escapeHtml(label)}</div><div></div><div></div></div>`;
+      }
 
-  elements.confirmDialog.addEventListener("close", () => {
-    if (elements.confirmDialog.returnValue !== "confirm") return;
-    pushUndo();
-    state.players.forEach(player => { player.scores = {}; });
-    saveState();
-    render();
-    showToast("Neue Runde gestartet");
-  });
+      function scoreRow(category) {
+        const cells = [0, 1].map(player => {
+          const scoreObj = state.current.scores[player];
+          const filled = hasOwn(scoreObj, category.id);
+          const value = filled ? scoreObj[category.id] : '';
+          const classes = ['score-button'];
+          if (filled) classes.push('is-filled');
+          if (filled && Number(value) === 0) classes.push('is-zero');
+          return `<div class="score-cell"><button class="${classes.join(' ')}" type="button" data-player="${player}" data-category="${category.id}" ${state.current.completed ? 'disabled' : ''} aria-label="${escapeHtml(state.current.players[player])}, ${escapeHtml(category.label)}">${filled ? value : '–'}</button></div>`;
+        }).join('');
+        return `<div class="grid-row"><div class="category-cell"><span>${escapeHtml(category.label)}</span>${category.face ? `<span class="dice-face" aria-hidden="true">${category.face}</span>` : ''}</div>${cells}</div>`;
+      }
 
-  render();
-})();
+      function calcRow(label, value0, value1, className) {
+        return `<div class="grid-row ${className}"><div>${escapeHtml(label)}</div><div class="calculated">${value0}</div><div class="calculated">${value1}</div></div>`;
+      }
 
-</script>
+      function renderGame() {
+        const totals = state.current.scores.map(totalsFor);
+        const [name0, name1] = state.current.players;
+        $('headerName0').textContent = name0;
+        $('headerName1').textContent = name1;
+        $('headerTotal0').textContent = `${totals[0].total} Punkte`;
+        $('headerTotal1').textContent = `${totals[1].total} Punkte`;
+        $('starterDot0').textContent = state.current.starter === 0 ? 'START' : '';
+        $('starterDot1').textContent = state.current.starter === 1 ? 'START' : '';
+        $('starterName').textContent = state.current.players[state.current.starter];
+        $('progressName0').textContent = name0;
+        $('progressName1').textContent = name1;
+        $('progressText0').textContent = `${totals[0].filled} / ${allCategories.length}`;
+        $('progressText1').textContent = `${totals[1].filled} / ${allCategories.length}`;
+        $('progressBar0').style.width = `${totals[0].filled / allCategories.length * 100}%`;
+        $('progressBar1').style.width = `${totals[1].filled / allCategories.length * 100}%`;
+        $('undoButton').disabled = state.undo.length === 0 || state.current.completed;
+        $('reopenButton').classList.toggle('hidden', !state.current.completed);
+
+        $('leaderScore').textContent = `${totals[0].total} : ${totals[1].total}`;
+        if (state.current.completed) {
+          $('gameStatusLabel').textContent = 'Runde abgeschlossen';
+          if (totals[0].total === totals[1].total) $('leaderName').textContent = 'Unentschieden';
+          else $('leaderName').textContent = `${totals[0].total > totals[1].total ? name0 : name1} gewinnt`;
+        } else if (totals[0].total === 0 && totals[1].total === 0) {
+          $('gameStatusLabel').textContent = 'Aktueller Stand';
+          $('leaderName').textContent = 'Noch offen';
+        } else if (totals[0].total === totals[1].total) {
+          $('gameStatusLabel').textContent = 'Aktueller Stand';
+          $('leaderName').textContent = 'Gleichstand';
+        } else {
+          $('gameStatusLabel').textContent = 'Aktueller Stand';
+          $('leaderName').textContent = `${totals[0].total > totals[1].total ? name0 : name1} führt`;
+        }
+        renderScoreRows();
+      }
+
+      function openScoreDialog(player, categoryId) {
+        if (state.current.completed) return;
+        const category = categoryMap[categoryId];
+        if (!category) return;
+        activeEdit = { player, categoryId };
+        $('scorePlayerLabel').textContent = state.current.players[player];
+        $('scoreCategoryLabel').textContent = category.label;
+        const current = state.current.scores[player];
+        $('scoreInput').value = hasOwn(current, categoryId) ? current[categoryId] : '';
+        $('quickValues').innerHTML = category.quick.map(value => `<button class="quick-value" type="button" data-value="${value}">${value}</button>`).join('');
+        $('quickValues').querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
+          $('scoreInput').value = button.dataset.value;
+          $('scoreInput').focus();
+        }));
+        $('scoreDialog').showModal();
+        setTimeout(() => $('scoreInput').focus(), 80);
+      }
+
+      function pushUndo() {
+        state.undo.push({ scores: clone(state.current.scores) });
+        if (state.undo.length > 30) state.undo.shift();
+      }
+
+      function setScore(value, clear = false) {
+        if (!activeEdit || state.current.completed) return;
+        pushUndo();
+        const target = state.current.scores[activeEdit.player];
+        if (clear) delete target[activeEdit.categoryId];
+        else target[activeEdit.categoryId] = clampScore(value) ?? 0;
+        saveState();
+        $('scoreDialog').close();
+        activeEdit = null;
+        renderAll();
+        maybeFinishGame();
+      }
+
+      function maybeFinishGame() {
+        if (state.current.completed) return;
+        const totals = state.current.scores.map(totalsFor);
+        if (totals.every(t => t.filled === allCategories.length)) {
+          const record = recordFromCurrent();
+          state.current.completed = true;
+          state.current.historyId = record.id;
+          state.history.unshift(record);
+          state.undo = [];
+          saveState();
+          renderAll();
+          showSummary(record);
+        }
+      }
+
+      function reopenCurrentGame() {
+        if (!state.current.completed) return;
+        const historyId = state.current.historyId;
+        state.history = state.history.filter(item => item.id !== historyId);
+        state.current.completed = false;
+        state.current.historyId = null;
+        state.undo = [];
+        saveState();
+        renderAll();
+        toast('Runde wieder zur Bearbeitung geöffnet');
+      }
+
+      function openNewGameDialog() {
+        $('newName0').value = state.settings.players[0];
+        $('newName1').value = state.settings.players[1];
+        $('starterRadioLabel0').textContent = state.settings.players[0];
+        $('starterRadioLabel1').textContent = state.settings.players[1];
+        $(`starterRadio${state.settings.nextStarter}`).checked = true;
+        $('newGameDialog').showModal();
+      }
+
+      function startNewGame() {
+        const players = [safeName($('newName0').value, 'Spieler 1'), safeName($('newName1').value, 'Spieler 2')];
+        const selected = document.querySelector('input[name="starter"]:checked');
+        const starter = selected?.value === '1' ? 1 : 0;
+        state.settings.players = clone(players);
+        state.settings.nextStarter = starter === 0 ? 1 : 0;
+        state.current = {
+          id: nowId(),
+          startedAt: new Date().toISOString(),
+          starter,
+          players: clone(players),
+          scores: [{}, {}],
+          completed: false,
+          historyId: null
+        };
+        state.undo = [];
+        saveState();
+        $('newGameDialog').close();
+        activatePage('game');
+        renderAll();
+        toast(`${players[starter]} beginnt`);
+      }
+
+      function showSummary(record) {
+        const [t0, t1] = record.totals;
+        const winnerText = record.winner === null ? 'Unentschieden' : `${record.players[record.winner]} gewinnt`;
+        $('summaryWinner').textContent = winnerText;
+        $('summaryScore').textContent = `${t0.total} : ${t1.total}`;
+        const yatzy0 = Number(record.scores[0].yatzy || 0) > 0 ? 'Ja' : 'Nein';
+        const yatzy1 = Number(record.scores[1].yatzy || 0) > 0 ? 'Ja' : 'Nein';
+        $('summaryGrid').innerHTML = `
+          <div class="summary-tile"><small>Startspieler</small><strong>${escapeHtml(record.players[record.starter])}</strong></div>
+          <div class="summary-tile"><small>Vorsprung</small><strong>${record.margin} Punkte</strong></div>
+          <div class="summary-tile"><small>Bonus</small><strong>${t0.bonus ? escapeHtml(record.players[0]) : '–'}${t0.bonus && t1.bonus ? ' & ' : ''}${t1.bonus ? escapeHtml(record.players[1]) : ''}</strong></div>
+          <div class="summary-tile"><small>Yatzy</small><strong>${escapeHtml(record.players[0])}: ${yatzy0}<br>${escapeHtml(record.players[1])}: ${yatzy1}</strong></div>`;
+        $('summaryDialog').showModal();
+      }
+
+      function renderStats() {
+        const history = state.history;
+        $('gamesCountPill').textContent = `${history.length} ${history.length === 1 ? 'Spiel' : 'Spiele'}`;
+        const container = $('statsContent');
+        if (!history.length) {
+          container.innerHTML = '<div class="empty-card"><strong>Noch keine Statistik</strong>Nach der ersten abgeschlossenen Runde erscheinen hier Siege, Durchschnitt, Startspieler-Auswertung und Kategorien.</div>';
+          return;
+        }
+
+        const names = state.settings.players;
+        const playerStats = [0, 1].map(index => computePlayerStats(index, names[index]));
+        const totalWins = playerStats[0].wins + playerStats[1].wins;
+        const ties = history.length - totalWins;
+        const startWins = history.filter(r => r.winner !== null && r.winner === r.starter).length;
+        const startDecisions = history.filter(r => r.winner !== null).length;
+        const starterWinRate = startDecisions ? Math.round(startWins / startDecisions * 100) : 0;
+        const biggest = history.reduce((best, r) => !best || r.margin > best.margin ? r : best, null);
+        const closest = history.filter(r => r.winner !== null).reduce((best, r) => !best || r.margin < best.margin ? r : best, null);
+
+        container.innerHTML = `
+          <div class="stats-grid" style="margin-bottom:.7rem">
+            <div class="stat-card"><div class="label">Partien</div><div class="value">${history.length}</div><div class="sub">${ties} Unentschieden</div></div>
+            <div class="stat-card"><div class="label">Startspieler gewinnt</div><div class="value">${starterWinRate}%</div><div class="sub">${startWins} von ${startDecisions}</div></div>
+          </div>
+
+          <section class="panel-card">
+            <h3>Direktvergleich</h3>
+            <div class="duel-score">
+              <div><div class="name">${escapeHtml(names[0])}</div><div class="wins">${playerStats[0].wins}</div></div>
+              <div class="separator">:</div>
+              <div><div class="name">${escapeHtml(names[1])}</div><div class="wins">${playerStats[1].wins}</div></div>
+            </div>
+            <div class="metric-list">
+              <div class="metric-row"><span>Grösster Sieg</span><strong>${biggest ? `${escapeHtml(biggest.players[biggest.winner ?? 0])} +${biggest.margin}` : '–'}</strong></div>
+              <div class="metric-row"><span>Knappster Sieg</span><strong>${closest ? `${escapeHtml(closest.players[closest.winner])} +${closest.margin}` : '–'}</strong></div>
+              <div class="metric-row"><span>Längste Siegesserie</span><strong>${escapeHtml(names[0])}: ${playerStats[0].longestStreak} · ${escapeHtml(names[1])}: ${playerStats[1].longestStreak}</strong></div>
+            </div>
+          </section>
+
+          <div class="stats-grid" style="margin-bottom:.7rem">
+            ${playerStats.map((s, index) => playerStatCard(s, index)).join('')}
+          </div>
+
+          <section class="panel-card">
+            <h3>Punkteverlauf</h3>
+            ${buildTrendChart(history)}
+          </section>
+
+          <section class="panel-card">
+            <h3>Startspieler-Auswertung</h3>
+            <div class="metric-list">
+              ${playerStats.map((s, index) => `
+                <div class="metric-row"><span>${escapeHtml(names[index])} beginnt</span><strong>${s.startedGames} Spiele · ${s.startedWinRate}% Siege</strong></div>
+                <div class="metric-row"><span>${escapeHtml(names[index])} beginnt nicht</span><strong>${s.secondGames} Spiele · ${s.secondWinRate}% Siege</strong></div>`).join('')}
+            </div>
+          </section>
+
+          <section class="panel-card category-stats">
+            <h3>Kategorien</h3>
+            ${buildCategoryStatsTable(names)}
+          </section>`;
+      }
+
+      function computePlayerStats(index, currentName) {
+        const matching = state.history.map(record => {
+          let idx = record.players.findIndex(name => name === currentName);
+          if (idx < 0 && record.players.length === 2) idx = index;
+          return { record, idx };
+        }).filter(item => item.idx >= 0);
+        const scores = matching.map(item => item.record.totals[item.idx].total);
+        const wins = matching.filter(item => item.record.winner === item.idx).length;
+        const losses = matching.filter(item => item.record.winner !== null && item.record.winner !== item.idx).length;
+        const started = matching.filter(item => item.record.starter === item.idx);
+        const second = matching.filter(item => item.record.starter !== item.idx);
+        const startedWins = started.filter(item => item.record.winner === item.idx).length;
+        const secondWins = second.filter(item => item.record.winner === item.idx).length;
+        return {
+          games: matching.length,
+          wins,
+          losses,
+          winRate: matching.length ? Math.round(wins / matching.length * 100) : 0,
+          average: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
+          high: scores.length ? Math.max(...scores) : 0,
+          low: scores.length ? Math.min(...scores) : 0,
+          bonusRate: matching.length ? Math.round(matching.filter(item => item.record.totals[item.idx].bonus > 0).length / matching.length * 100) : 0,
+          yatzyCount: matching.filter(item => Number(item.record.scores[item.idx].yatzy || 0) > 0).length,
+          longestStreak: longestWinStreak(matching, index, currentName),
+          startedGames: started.length,
+          startedWinRate: started.length ? Math.round(startedWins / started.length * 100) : 0,
+          secondGames: second.length,
+          secondWinRate: second.length ? Math.round(secondWins / second.length * 100) : 0
+        };
+      }
+
+      function longestWinStreak(matching, fallbackIndex, currentName) {
+        const chronological = [...matching].sort((a, b) => new Date(a.record.finishedAt) - new Date(b.record.finishedAt));
+        let best = 0;
+        let current = 0;
+        chronological.forEach(item => {
+          const idx = item.record.players.findIndex(n => n === currentName);
+          const resolved = idx >= 0 ? idx : fallbackIndex;
+          if (item.record.winner === resolved) {
+            current += 1;
+            best = Math.max(best, current);
+          } else current = 0;
+        });
+        return best;
+      }
+
+      function playerStatCard(stats, index) {
+        return `<div class="stat-card">
+          <div class="player-stat-head"><span class="player-chip ${index === 1 ? 'p2' : ''}">${escapeHtml(state.settings.players[index])}</span></div>
+          <div class="metric-list">
+            <div class="metric-row"><span>Siege</span><strong>${stats.wins} (${stats.winRate}%)</strong></div>
+            <div class="metric-row"><span>Ø Punkte</span><strong>${stats.average}</strong></div>
+            <div class="metric-row"><span>Rekord</span><strong>${stats.high}</strong></div>
+            <div class="metric-row"><span>Tiefster Wert</span><strong>${stats.low}</strong></div>
+            <div class="metric-row"><span>Bonusquote</span><strong>${stats.bonusRate}%</strong></div>
+            <div class="metric-row"><span>Yatzys</span><strong>${stats.yatzyCount}</strong></div>
+          </div>
+        </div>`;
+      }
+
+      function buildTrendChart(history) {
+        const chronological = [...history].sort((a, b) => new Date(a.finishedAt) - new Date(b.finishedAt)).slice(-20);
+        const width = 640, height = 180, left = 35, right = 12, top = 14, bottom = 26;
+        const allScores = chronological.flatMap(r => r.totals.map(t => t.total));
+        const minValue = Math.max(0, Math.floor((Math.min(...allScores) - 20) / 20) * 20);
+        const maxValue = Math.ceil((Math.max(...allScores) + 20) / 20) * 20 || 300;
+        const x = i => chronological.length === 1 ? (left + width - right) / 2 : left + i * (width - left - right) / (chronological.length - 1);
+        const y = value => top + (maxValue - value) * (height - top - bottom) / Math.max(1, maxValue - minValue);
+        const points = player => chronological.map((r, i) => `${x(i).toFixed(1)},${y(r.totals[player].total).toFixed(1)}`).join(' ');
+        const grid = [0, .25, .5, .75, 1].map(f => {
+          const yy = top + f * (height - top - bottom);
+          const label = Math.round(maxValue - f * (maxValue - minValue));
+          return `<line x1="${left}" y1="${yy}" x2="${width-right}" y2="${yy}" stroke="var(--line)" stroke-width="1"/><text x="${left-6}" y="${yy+3}" text-anchor="end" font-size="10" fill="var(--muted)">${label}</text>`;
+        }).join('');
+        return `<div class="chart-wrap"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Punkteverlauf der letzten ${chronological.length} Spiele">${grid}<polyline fill="none" stroke="var(--p1)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${points(0)}"/><polyline fill="none" stroke="var(--p2)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${points(1)}"/>${chronological.map((r, i) => `<circle cx="${x(i)}" cy="${y(r.totals[0].total)}" r="3.5" fill="var(--p1)"/><circle cx="${x(i)}" cy="${y(r.totals[1].total)}" r="3.5" fill="var(--p2)"/>`).join('')}<text x="${left}" y="${height-6}" font-size="10" fill="var(--muted)">älter</text><text x="${width-right}" y="${height-6}" text-anchor="end" font-size="10" fill="var(--muted)">neu</text></svg><div class="chart-legend"><span class="legend-item"><span class="legend-dot"></span>${escapeHtml(state.settings.players[0])}</span><span class="legend-item"><span class="legend-dot p2"></span>${escapeHtml(state.settings.players[1])}</span></div></div>`;
+      }
+
+      function buildCategoryStatsTable(names) {
+        const rows = allCategories.map(category => {
+          const stats = [0, 1].map(index => {
+            const values = state.history.map(record => {
+              let idx = record.players.findIndex(n => n === names[index]);
+              if (idx < 0) idx = index;
+              return Number(record.scores[idx]?.[category.id] || 0);
+            });
+            const average = values.length ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1) : '0.0';
+            const zeroRate = values.length ? Math.round(values.filter(v => v === 0).length / values.length * 100) : 0;
+            return { average, zeroRate, max: values.length ? Math.max(...values) : 0 };
+          });
+          return `<tr><td>${escapeHtml(category.label)}</td><td>${stats[0].average}</td><td>${stats[1].average}</td><td>${stats[0].zeroRate}%</td><td>${stats[1].zeroRate}%</td><td>${stats[0].max}</td><td>${stats[1].max}</td></tr>`;
+        }).join('');
+        return `<table class="category-table"><thead><tr><th>Kategorie</th><th>Ø ${escapeHtml(names[0])}</th><th>Ø ${escapeHtml(names[1])}</th><th>0 ${escapeHtml(names[0])}</th><th>0 ${escapeHtml(names[1])}</th><th>Max ${escapeHtml(names[0])}</th><th>Max ${escapeHtml(names[1])}</th></tr></thead><tbody>${rows}</tbody></table>`;
+      }
+
+      function renderHistory() {
+        $('historyCountPill').textContent = String(state.history.length);
+        const container = $('historyContent');
+        if (!state.history.length) {
+          container.innerHTML = '<div class="empty-card"><strong>Noch kein Verlauf</strong>Abgeschlossene Runden werden automatisch mit Startspieler und komplettem Spielzettel gespeichert.</div>';
+          return;
+        }
+        container.innerHTML = `<div class="history-list">${state.history.map(record => {
+          const winner = record.winner === null ? 'Unentschieden' : `${record.players[record.winner]} gewinnt`;
+          return `<article class="history-card">
+            <div class="history-main">
+              <div><div class="history-date">${formatDate(record.finishedAt)}</div><div class="history-title">${escapeHtml(winner)}</div><div class="history-meta">Start: ${escapeHtml(record.players[record.starter])} · Abstand ${record.margin}</div></div>
+              <div class="history-score">${record.totals[0].total} : ${record.totals[1].total}<small>${escapeHtml(record.players[0])} · ${escapeHtml(record.players[1])}</small></div>
+            </div>
+            <div class="history-actions"><button type="button" data-open-history="${record.id}">Spielzettel öffnen</button><button type="button" data-delete-history="${record.id}" aria-label="Spiel löschen">🗑</button></div>
+          </article>`;
+        }).join('')}</div>`;
+        container.querySelectorAll('[data-open-history]').forEach(button => button.addEventListener('click', () => openHistoryDetail(button.dataset.openHistory)));
+        container.querySelectorAll('[data-delete-history]').forEach(button => button.addEventListener('click', () => confirmDeleteHistory(button.dataset.deleteHistory)));
+      }
+
+      function openHistoryDetail(id) {
+        const record = state.history.find(r => r.id === id);
+        if (!record) return;
+        activeHistoryId = id;
+        $('historyDetailDate').textContent = formatDate(record.finishedAt);
+        $('historyDetailTitle').textContent = record.winner === null ? 'Unentschieden' : `${record.players[record.winner]} gewinnt`;
+        const rows = [
+          `<div class="detail-row"><strong>Kategorie</strong><strong>${escapeHtml(record.players[0])}</strong><strong>${escapeHtml(record.players[1])}</strong></div>`,
+          ...upperCategories.map(c => detailRow(c.label, record.scores[0][c.id], record.scores[1][c.id])),
+          detailRow('Summe oben', record.totals[0].upper, record.totals[1].upper),
+          detailRow(`Bonus (${BONUS_POINTS})`, record.totals[0].bonus, record.totals[1].bonus),
+          ...lowerCategories.map(c => detailRow(c.label, record.scores[0][c.id], record.scores[1][c.id])),
+          detailRow('Gesamtsumme', record.totals[0].total, record.totals[1].total)
+        ];
+        $('historyDetailTable').innerHTML = rows.join('');
+        $('historyDialog').showModal();
+      }
+
+      function detailRow(label, v0, v1) {
+        return `<div class="detail-row"><span>${escapeHtml(label)}</span><span>${Number(v0) || 0}</span><span>${Number(v1) || 0}</span></div>`;
+      }
+
+      function confirmDeleteHistory(id) {
+        const record = state.history.find(r => r.id === id);
+        if (!record) return;
+        showConfirm('Spiel löschen?', `${formatDate(record.finishedAt)} · ${record.totals[0].total} : ${record.totals[1].total}`, 'Löschen', () => {
+          state.history = state.history.filter(r => r.id !== id);
+          saveState();
+          renderAll();
+          toast('Spiel gelöscht');
+        });
+      }
+
+      function renderSettings() {
+        $('settingsName0').value = state.settings.players[0];
+        $('settingsName1').value = state.settings.players[1];
+      }
+
+      function saveNames() {
+        const names = [safeName($('settingsName0').value, 'Spieler 1'), safeName($('settingsName1').value, 'Spieler 2')];
+        state.settings.players = clone(names);
+        state.current.players = clone(names);
+        saveState();
+        renderAll();
+        toast('Namen gespeichert');
+      }
+
+      function exportData() {
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `yatzy-duell-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        toast('Export erstellt');
+      }
+
+      async function importData(file) {
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          const imported = normalizeState(parsed);
+          showConfirm('Daten importieren?', 'Die aktuellen lokalen Daten werden durch die importierte Sicherung ersetzt.', 'Importieren', () => {
+            state = imported;
+            saveState();
+            renderAll();
+            activatePage('game');
+            toast('Daten importiert');
+          }, '📥');
+        } catch {
+          toast('Die Datei konnte nicht gelesen werden');
+        } finally {
+          $('importFile').value = '';
+        }
+      }
+
+      function deleteAllData() {
+        showConfirm('Alle Daten löschen?', 'Diese Aktion kann nicht rückgängig gemacht werden. Historie und Statistik gehen vollständig verloren.', 'Alles löschen', () => {
+          state = makeNewState();
+          saveState();
+          renderAll();
+          activatePage('game');
+          toast('Alle Daten gelöscht');
+        });
+      }
+
+      function showConfirm(title, text, okLabel, action, icon = '⚠️') {
+        confirmAction = action;
+        $('confirmTitle').textContent = title;
+        $('confirmText').textContent = text;
+        $('confirmOk').textContent = okLabel;
+        $('confirmIcon').textContent = icon;
+        $('confirmDialog').showModal();
+      }
+
+      function undo() {
+        if (!state.undo.length || state.current.completed) return;
+        const previous = state.undo.pop();
+        state.current.scores = previous.scores;
+        saveState();
+        renderAll();
+        toast('Letzte Eingabe rückgängig gemacht');
+      }
+
+      function shareTextForRecord(record) {
+        const result = record.winner === null ? 'Unentschieden' : `${record.players[record.winner]} gewinnt`;
+        return `Yatzy Duell\n${result}\n${record.players[0]} ${record.totals[0].total} : ${record.totals[1].total} ${record.players[1]}\nStartspieler: ${record.players[record.starter]}\nBonus: ${record.totals[0].bonus ? record.players[0] : '–'}${record.totals[0].bonus && record.totals[1].bonus ? ', ' : ''}${record.totals[1].bonus ? record.players[1] : ''}`;
+      }
+
+      function shareCurrent() {
+        const record = state.current.completed ? state.history.find(r => r.id === state.current.historyId) : recordFromCurrent();
+        shareText(shareTextForRecord(record));
+      }
+
+      function shareHistoryDetail() {
+        const record = state.history.find(r => r.id === activeHistoryId);
+        if (record) shareText(shareTextForRecord(record));
+      }
+
+      async function shareText(text) {
+        try {
+          if (navigator.share) await navigator.share({ title: 'Yatzy Duell', text });
+          else {
+            await navigator.clipboard.writeText(text);
+            toast('Resultat kopiert');
+          }
+        } catch (error) {
+          if (error?.name !== 'AbortError') toast('Teilen war nicht möglich');
+        }
+      }
+
+      function activatePage(page) {
+        document.querySelectorAll('.page').forEach(el => el.classList.toggle('active', el.dataset.page === page));
+        document.querySelectorAll('.nav-button').forEach(el => el.classList.toggle('active', el.dataset.target === page));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (page === 'stats') renderStats();
+        if (page === 'history') renderHistory();
+        if (page === 'settings') renderSettings();
+      }
+
+      function renderAll() {
+        renderGame();
+        renderStats();
+        renderHistory();
+        renderSettings();
+      }
+
+      function formatDate(value) {
+        try {
+          return new Intl.DateTimeFormat('de-CH', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+        } catch { return value; }
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
+      }
+
+      function toast(message) {
+        clearTimeout(toastTimer);
+        $('toast').textContent = message;
+        $('toast').classList.add('show');
+        toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2200);
+      }
+
+      document.querySelectorAll('.nav-button').forEach(button => button.addEventListener('click', () => activatePage(button.dataset.target)));
+      $('quickNewButton').addEventListener('click', openNewGameDialog);
+      $('newGameButton').addEventListener('click', openNewGameDialog);
+      $('summaryNewGameButton').addEventListener('click', () => { $('summaryDialog').close(); openNewGameDialog(); });
+      $('summaryCloseButton').addEventListener('click', () => $('summaryDialog').close());
+      $('startGameButton').addEventListener('click', startNewGame);
+      $('saveScoreButton').addEventListener('click', () => setScore($('scoreInput').value));
+      $('zeroScoreButton').addEventListener('click', () => setScore(0));
+      $('clearScoreButton').addEventListener('click', () => setScore(null, true));
+      $('scoreInput').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); setScore($('scoreInput').value); } });
+      $('undoButton').addEventListener('click', undo);
+      $('shareButton').addEventListener('click', shareCurrent);
+      $('reopenButton').addEventListener('click', reopenCurrentGame);
+      $('saveNamesButton').addEventListener('click', saveNames);
+      $('exportButton').addEventListener('click', exportData);
+      $('importButton').addEventListener('click', () => $('importFile').click());
+      $('importFile').addEventListener('change', event => { const file = event.target.files?.[0]; if (file) importData(file); });
+      $('deleteAllButton').addEventListener('click', deleteAllData);
+      $('historyDetailClose').addEventListener('click', () => $('historyDialog').close());
+      $('historyDetailShare').addEventListener('click', shareHistoryDetail);
+      $('confirmCancel').addEventListener('click', () => { confirmAction = null; $('confirmDialog').close(); });
+      $('confirmOk').addEventListener('click', () => { const action = confirmAction; confirmAction = null; $('confirmDialog').close(); if (action) action(); });
+
+      $('newName0').addEventListener('input', () => { $('starterRadioLabel0').textContent = safeName($('newName0').value, 'Spieler 1'); });
+      $('newName1').addEventListener('input', () => { $('starterRadioLabel1').textContent = safeName($('newName1').value, 'Spieler 2'); });
+
+      renderAll();
+    })();
+  </script>
 </body>
 </html>
