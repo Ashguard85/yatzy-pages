@@ -1,0 +1,809 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f7fb">
+  <meta name="color-scheme" content="light dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Yatzy">
+  <meta name="description" content="Ein übersichtlicher Yatzy-Punkteblock für zwei Spieler.">
+  <title>Yatzy Punkteblock</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f3f6fb;
+  --panel: #ffffff;
+  --panel-soft: #f7f9fc;
+  --text: #101828;
+  --muted: #667085;
+  --line: #e1e7ef;
+  --accent: #1769e8;
+  --accent-strong: #0b57d0;
+  --accent-soft: #eaf2ff;
+  --success: #14833b;
+  --success-soft: #edf9f0;
+  --danger: #c51f46;
+  --shadow: 0 14px 40px rgba(15, 23, 42, .08);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100svh;
+  background:
+    radial-gradient(circle at 10% -10%, rgba(23, 105, 232, .14), transparent 34rem),
+    var(--bg);
+  color: var(--text);
+  padding-bottom: calc(.8rem + env(safe-area-inset-bottom));
+}
+button, input, select { font: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  gap: .72rem;
+  align-items: center;
+  padding: calc(.7rem + env(safe-area-inset-top)) .85rem .7rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(20px) saturate(1.2);
+}
+.brand-mark {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #2b7cf4, #0758d4);
+  color: white;
+  box-shadow: 0 9px 22px rgba(23, 105, 232, .26);
+  font-size: 1.45rem;
+}
+.brand-copy h1 { margin: 0; font-size: 1.08rem; letter-spacing: .16em; }
+.brand-copy p { margin: .08rem 0 0; color: var(--muted); font-size: .73rem; }
+.icon-button, .close-button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--accent);
+  box-shadow: 0 5px 18px rgba(15, 23, 42, .06);
+  font-size: 1.25rem;
+}
+
+main { width: min(100%, 780px); margin: 0 auto; padding: .85rem .55rem 1rem; }
+.status-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  margin: 0 .15rem .72rem;
+  padding: .82rem .92rem;
+  border: 1px solid #d5e5ff;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--accent-soft), var(--panel));
+}
+.status-card > div:first-child { display: grid; gap: .12rem; }
+.eyebrow {
+  color: var(--accent);
+  font-size: .69rem;
+  font-weight: 850;
+  letter-spacing: .075em;
+  text-transform: uppercase;
+}
+.status-card strong { font-size: 1.08rem; }
+.status-score { color: var(--accent-strong); font-size: 1.08rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+
+.scorecard {
+  overflow: clip;
+  border: 1px solid var(--line);
+  border-radius: 19px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.grid-row {
+  display: grid;
+  grid-template-columns: minmax(128px, 1.55fr) repeat(2, minmax(74px, 1fr));
+}
+.grid-row > * {
+  min-width: 0;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  padding: .34rem .48rem;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.grid-row > *:last-child { border-right: 0; }
+.grid-header {
+  position: sticky;
+  top: calc(58px + env(safe-area-inset-top));
+  z-index: 20;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  backdrop-filter: blur(14px);
+}
+.grid-header > * { min-height: 61px; }
+.category-title {
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.player-header {
+  flex-direction: column;
+  justify-content: center;
+  gap: .08rem;
+  text-align: center;
+  cursor: pointer;
+}
+.player-header small { color: var(--muted); font-size: .64rem; }
+.player-header strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--accent);
+  font-size: .9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.section-row > * { min-height: 36px; background: var(--panel-soft); }
+.section-row > :first-child {
+  color: var(--accent);
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .065em;
+  text-transform: uppercase;
+}
+.category-cell { justify-content: space-between; gap: .35rem; font-size: .83rem; line-height: 1.15; }
+.category-cell .dice-face { color: var(--muted); font-size: 1.18rem; }
+.score-cell { justify-content: center; padding: .28rem !important; }
+.score-button {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #d7deea;
+  border-radius: 11px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+.score-button.is-filled { background: var(--panel); color: var(--text); border-color: #c9d6e8; }
+.score-button.is-zero { color: var(--muted); text-decoration: line-through; }
+.score-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent); border-color: var(--accent); }
+.total-row > *, .bonus-row > *, .grand-row > * { font-weight: 860; }
+.total-row > * { background: var(--panel-soft); }
+.bonus-row > * { color: var(--success); background: var(--success-soft); }
+.grand-row > * { min-height: 54px; border-top: 2px solid var(--text); border-bottom: 0; font-size: 1rem; }
+.calculated { justify-content: center; font-variant-numeric: tabular-nums; }
+.grand-row .calculated { color: var(--accent); font-size: 1.18rem; }
+
+.progress-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: .36rem .7rem;
+  margin: .75rem .15rem 0;
+  padding: .75rem .85rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+}
+.progress-card > div:nth-child(1), .progress-card > div:nth-child(3) { display: contents; }
+.progress-card span { overflow: hidden; color: var(--muted); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.progress-card strong { font-size: .75rem; font-variant-numeric: tabular-nums; }
+.progress-track { grid-column: 1 / -1; height: 5px; overflow: hidden; border-radius: 999px; background: var(--line); }
+.progress-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--accent); transition: width .2s ease; }
+.storage-note { margin: .56rem .35rem; color: var(--muted); font-size: .72rem; line-height: 1.4; }
+.action-row { display: grid; grid-template-columns: 1fr .75fr 1.2fr; gap: .5rem; margin-top: .72rem; }
+.button {
+  min-height: 45px;
+  border: 0;
+  border-radius: 13px;
+  padding: .7rem .75rem;
+  font-weight: 850;
+}
+.button.primary { background: var(--accent); color: white; box-shadow: 0 8px 20px rgba(23, 105, 232, .18); }
+.button.secondary { border: 1px solid #ccd6e5; background: var(--panel); color: var(--accent); }
+.button.danger { background: var(--danger); color: white; }
+.button:disabled { opacity: .4; }
+.full-width { width: 100%; }
+
+
+dialog {
+  width: min(92vw, 430px);
+  max-height: 90svh;
+  border: 0;
+  border-radius: 22px;
+  padding: 0;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .34);
+}
+dialog::backdrop { background: rgba(15, 23, 42, .48); backdrop-filter: blur(4px); }
+.sheet-dialog { width: min(100%, 520px); margin: auto auto 0; border-radius: 24px 24px 0 0; }
+.sheet { display: grid; gap: .86rem; padding: .5rem .95rem calc(1rem + env(safe-area-inset-bottom)); }
+.sheet-handle { width: 42px; height: 5px; margin: 0 auto .15rem; border-radius: 999px; background: var(--line); }
+.sheet-title-row { display: flex; align-items: center; justify-content: space-between; gap: .8rem; }
+.sheet-title-row h2, .modal-card h2 { margin: .1rem 0 0; font-size: 1.2rem; }
+.close-button { box-shadow: none; background: var(--panel-soft); color: var(--muted); }
+.score-input-label { color: var(--muted); font-size: .76rem; font-weight: 800; }
+.score-input {
+  width: 100%;
+  height: 64px;
+  border: 1px solid #cdd8e8;
+  border-radius: 16px;
+  background: var(--panel-soft);
+  color: var(--text);
+  text-align: center;
+  font-size: 1.65rem;
+  font-weight: 900;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.score-input::-webkit-inner-spin-button { display: none; }
+.score-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent); }
+.quick-values { display: flex; flex-wrap: wrap; gap: .45rem; min-height: 1px; }
+.quick-value {
+  min-width: 45px;
+  min-height: 38px;
+  padding: .4rem .65rem;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--panel-soft);
+  color: var(--accent);
+  font-weight: 850;
+}
+.sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+.three-actions { grid-template-columns: .85fr .95fr 1.2fr; }
+.modal-card { display: grid; gap: .85rem; padding: 1.05rem; }
+.modal-card label { display: grid; gap: .35rem; color: var(--muted); font-size: .77rem; font-weight: 800; }
+.modal-card input, .modal-card select {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: .65rem .72rem;
+  background: var(--panel-soft);
+  color: var(--text);
+}
+.compact-modal { text-align: center; }
+.compact-modal p { margin: -.25rem 0 .2rem; color: var(--muted); line-height: 1.45; }
+.confirm-icon { display: grid; place-items: center; width: 52px; height: 52px; margin: 0 auto; border-radius: 16px; background: var(--accent-soft); color: var(--accent); font-size: 1.5rem; }
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  z-index: 100;
+  transform: translate(-50%, 120px);
+  opacity: 0;
+  max-width: calc(100vw - 2rem);
+  padding: .72rem 1rem;
+  border-radius: 13px;
+  background: #101828;
+  color: white;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, .24);
+  font-size: .8rem;
+  font-weight: 750;
+  transition: .22s ease;
+}
+.toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+@media (max-width: 390px) {
+  main { padding-left: .32rem; padding-right: .32rem; }
+  .grid-row { grid-template-columns: minmax(119px, 1.42fr) repeat(2, minmax(71px, 1fr)); }
+  .grid-row > * { padding-left: .34rem; padding-right: .34rem; }
+  .category-cell { font-size: .78rem; }
+  .category-cell .dice-face { font-size: 1.05rem; }
+  .player-header strong { font-size: .83rem; }
+  .action-row { grid-template-columns: 1fr 1fr; }
+  .action-row .primary { grid-column: 1 / -1; }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #080c13;
+    --panel: #111722;
+    --panel-soft: #171e2a;
+    --text: #f6f8fb;
+    --muted: #9aa5b5;
+    --line: #2a3444;
+    --accent: #5a9fff;
+    --accent-strong: #82b6ff;
+    --accent-soft: #10294d;
+    --success: #63d884;
+    --success-soft: #10281a;
+    --shadow: 0 14px 40px rgba(0, 0, 0, .24);
+  }
+  body { background: radial-gradient(circle at 10% -10%, rgba(53, 126, 238, .16), transparent 30rem), var(--bg); }
+  .status-card { border-color: #234b7f; }
+  .score-button { border-color: #354154; }
+  .button.secondary { border-color: #3a4658; }
+}
+
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark" aria-hidden="true">
+      <span>⚄</span>
+    </div>
+    <div class="brand-copy">
+      <h1>YATZY</h1>
+      <p>Punkteblock für zwei</p>
+    </div>
+    <button class="icon-button" id="settingsButton" type="button" aria-label="Einstellungen öffnen">
+      <span aria-hidden="true">⚙︎</span>
+    </button>
+  </header>
+
+  <main>
+    <section class="status-card" aria-live="polite">
+      <div>
+        <span class="eyebrow">Aktueller Stand</span>
+        <strong id="leaderName">Noch offen</strong>
+      </div>
+      <div class="status-score" id="leaderScore">0 : 0</div>
+    </section>
+
+    <section class="scorecard" aria-label="Yatzy Punkteblock">
+      <div class="grid-row grid-header" id="playerHeader">
+        <div class="category-title">Kategorie</div>
+      </div>
+      <div id="scoreRows"></div>
+    </section>
+
+    <section class="progress-card" aria-label="Spielfortschritt">
+      <div><span id="progressName0">Spieler 1</span><strong id="progress0">0 / 15</strong></div>
+      <div class="progress-track"><span id="progressBar0"></span></div>
+      <div><span id="progressName1">Spieler 2</span><strong id="progress1">0 / 15</strong></div>
+      <div class="progress-track"><span id="progressBar1"></span></div>
+    </section>
+
+    <p class="storage-note">Die Punkte werden automatisch nur in diesem Browser gespeichert.</p>
+
+    <div class="action-row">
+      <button class="button secondary" id="undoButton" type="button" disabled>↶ Rückgängig</button>
+      <button class="button secondary" id="shareButton" type="button">Teilen</button>
+      <button class="button primary" id="newGameButton" type="button">Neue Runde</button>
+    </div>
+  </main>
+
+  <dialog id="scoreDialog" class="sheet-dialog">
+    <form method="dialog" class="sheet">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-title-row">
+        <div>
+          <span class="eyebrow" id="scorePlayerLabel">Spieler 1</span>
+          <h2 id="scoreCategoryLabel">Einer</h2>
+        </div>
+        <button class="close-button" value="cancel" aria-label="Schließen">×</button>
+      </div>
+      <label class="score-input-label" for="scoreInput">Punkte</label>
+      <input id="scoreInput" class="score-input" type="number" inputmode="numeric" min="0" max="999" step="1" autocomplete="off" placeholder="0">
+      <div class="quick-values" id="quickValues" aria-label="Schnellauswahl"></div>
+      <div class="sheet-actions three-actions">
+        <button class="button secondary" id="clearScoreButton" type="button">Leeren</button>
+        <button class="button secondary" id="zeroScoreButton" type="button">Streichen</button>
+        <button class="button primary" id="saveScoreButton" type="button">Übernehmen</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settingsDialog">
+    <form method="dialog" class="modal-card">
+      <div class="sheet-title-row">
+        <div><span class="eyebrow">Spiel</span><h2>Einstellungen</h2></div>
+        <button class="close-button" value="cancel" aria-label="Schließen">×</button>
+      </div>
+      <label>Spieler 1
+        <input id="playerName0" maxlength="18" autocomplete="off">
+      </label>
+      <label>Spieler 2
+        <input id="playerName1" maxlength="18" autocomplete="off">
+      </label>
+      <label>Bonus ab 63 Punkten
+        <select id="bonusSelect">
+          <option value="25">25 Punkte (Carlit-Block)</option>
+          <option value="35">35 Punkte</option>
+          <option value="50">50 Punkte</option>
+        </select>
+      </label>
+      <button class="button primary full-width" id="saveSettingsButton" type="button">Speichern</button>
+    </form>
+  </dialog>
+
+  <dialog id="confirmDialog">
+    <form method="dialog" class="modal-card compact-modal">
+      <span class="confirm-icon" aria-hidden="true">↻</span>
+      <h2>Neue Runde starten?</h2>
+      <p>Alle Punkte werden gelöscht. Die Spielernamen und Bonusregel bleiben erhalten.</p>
+      <div class="sheet-actions">
+        <button class="button secondary" value="cancel">Abbrechen</button>
+        <button class="button danger" value="confirm">Punkte löschen</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+(() => {
+  "use strict";
+
+  const STORAGE_KEY = "yatzy-two-player-v4";
+  const CATEGORIES = [
+    { section: "Oberer Teil", id: "ones", label: "Einer", symbol: "⚀", quick: [0, 1, 2, 3, 4, 5] },
+    { section: "Oberer Teil", id: "twos", label: "Zweier", symbol: "⚁", quick: [0, 2, 4, 6, 8, 10] },
+    { section: "Oberer Teil", id: "threes", label: "Dreier", symbol: "⚂", quick: [0, 3, 6, 9, 12, 15] },
+    { section: "Oberer Teil", id: "fours", label: "Vierer", symbol: "⚃", quick: [0, 4, 8, 12, 16, 20] },
+    { section: "Oberer Teil", id: "fives", label: "Fünfer", symbol: "⚄", quick: [0, 5, 10, 15, 20, 25] },
+    { section: "Oberer Teil", id: "sixes", label: "Sechser", symbol: "⚅", quick: [0, 6, 12, 18, 24, 30] },
+    { section: "Unterer Teil", id: "onePair", label: "1 Paar", quick: [0] },
+    { section: "Unterer Teil", id: "twoPairs", label: "2 Paare", quick: [0] },
+    { section: "Unterer Teil", id: "threeKind", label: "Drei Gleiche", quick: [0] },
+    { section: "Unterer Teil", id: "fourKind", label: "Vier Gleiche", quick: [0] },
+    { section: "Unterer Teil", id: "smallStraight", label: "Kleine Straße", quick: [0, 15] },
+    { section: "Unterer Teil", id: "largeStraight", label: "Große Straße", quick: [0, 20] },
+    { section: "Unterer Teil", id: "fullHouse", label: "Volles Haus", quick: [0] },
+    { section: "Unterer Teil", id: "chance", label: "Chance", quick: [0] },
+    { section: "Unterer Teil", id: "yatzy", label: "YATZY", quick: [0, 50] }
+  ];
+
+  const upperIds = CATEGORIES.filter(item => item.section === "Oberer Teil").map(item => item.id);
+  const lowerIds = CATEGORIES.filter(item => item.section === "Unterer Teil").map(item => item.id);
+  const maxFields = CATEGORIES.length;
+
+  let state = loadState();
+  let undoStack = [];
+  let activeEdit = null;
+  let toastTimer = null;
+
+  const elements = {
+    playerHeader: document.getElementById("playerHeader"),
+    scoreRows: document.getElementById("scoreRows"),
+    leaderName: document.getElementById("leaderName"),
+    leaderScore: document.getElementById("leaderScore"),
+    progressName0: document.getElementById("progressName0"),
+    progressName1: document.getElementById("progressName1"),
+    progress0: document.getElementById("progress0"),
+    progress1: document.getElementById("progress1"),
+    progressBar0: document.getElementById("progressBar0"),
+    progressBar1: document.getElementById("progressBar1"),
+    undoButton: document.getElementById("undoButton"),
+    scoreDialog: document.getElementById("scoreDialog"),
+    scorePlayerLabel: document.getElementById("scorePlayerLabel"),
+    scoreCategoryLabel: document.getElementById("scoreCategoryLabel"),
+    scoreInput: document.getElementById("scoreInput"),
+    quickValues: document.getElementById("quickValues"),
+    settingsDialog: document.getElementById("settingsDialog"),
+    confirmDialog: document.getElementById("confirmDialog"),
+    toast: document.getElementById("toast")
+  };
+
+  function defaultState() {
+    return {
+      players: [
+        { name: "Spieler 1", scores: {} },
+        { name: "Spieler 2", scores: {} }
+      ],
+      bonusValue: 25
+    };
+  }
+
+  function loadState() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (stored && Array.isArray(stored.players) && stored.players.length === 2) {
+        return {
+          ...defaultState(),
+          ...stored,
+          players: stored.players.map((player, index) => ({
+            name: String(player.name || `Spieler ${index + 1}`),
+            scores: player.scores && typeof player.scores === "object" ? player.scores : {}
+          }))
+        };
+      }
+    } catch (_) {
+      // Defekte Daten werden durch den Standardzustand ersetzt.
+    }
+    return defaultState();
+  }
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function pushUndo() {
+    undoStack.push(JSON.stringify(state));
+    if (undoStack.length > 40) undoStack.shift();
+    elements.undoButton.disabled = false;
+  }
+
+  function isFilled(player, id) {
+    return Object.prototype.hasOwnProperty.call(player.scores, id) && player.scores[id] !== "";
+  }
+
+  function scoreValue(player, id) {
+    if (!isFilled(player, id)) return 0;
+    return Math.max(0, Number.parseInt(player.scores[id], 10) || 0);
+  }
+
+  function sumIds(player, ids) {
+    return ids.reduce((sum, id) => sum + scoreValue(player, id), 0);
+  }
+
+  function upperTotal(player) { return sumIds(player, upperIds); }
+  function upperBonus(player) { return upperTotal(player) >= 63 ? Number(state.bonusValue) : 0; }
+  function lowerTotal(player) { return sumIds(player, lowerIds); }
+  function grandTotal(player) { return upperTotal(player) + upperBonus(player) + lowerTotal(player); }
+  function completed(player) { return CATEGORIES.filter(category => isFilled(player, category.id)).length; }
+
+  function createCell(className, text = "") {
+    const cell = document.createElement("div");
+    cell.className = className;
+    cell.textContent = text;
+    return cell;
+  }
+
+  function render() {
+    renderHeader();
+    renderRows();
+    renderStatus();
+    renderProgress();
+  }
+
+  function renderHeader() {
+    elements.playerHeader.innerHTML = "";
+    elements.playerHeader.appendChild(createCell("category-title", "Kategorie"));
+    state.players.forEach((player, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "player-header";
+      button.innerHTML = `<small>Spieler ${index + 1}</small><strong>${escapeHtml(player.name)}</strong>`;
+      button.addEventListener("click", openSettings);
+      elements.playerHeader.appendChild(button);
+    });
+  }
+
+  function renderRows() {
+    elements.scoreRows.innerHTML = "";
+    let currentSection = "";
+
+    CATEGORIES.forEach(category => {
+      if (category.section !== currentSection) {
+        currentSection = category.section;
+        elements.scoreRows.appendChild(sectionRow(currentSection));
+      }
+      elements.scoreRows.appendChild(scoreRow(category));
+
+      if (category.id === "sixes") {
+        elements.scoreRows.appendChild(calculationRow("Summe", upperTotal, "total-row"));
+        elements.scoreRows.appendChild(calculationRow(`Bonus ab 63 (+${state.bonusValue})`, upperBonus, "bonus-row"));
+        elements.scoreRows.appendChild(calculationRow("Summe oben", player => upperTotal(player) + upperBonus(player), "total-row"));
+      }
+    });
+
+    elements.scoreRows.appendChild(calculationRow("Summe unten", lowerTotal, "total-row"));
+    elements.scoreRows.appendChild(calculationRow("Gesamtsumme", grandTotal, "grand-row"));
+  }
+
+  function sectionRow(title) {
+    const row = document.createElement("div");
+    row.className = "grid-row section-row";
+    row.appendChild(createCell("", title));
+    row.appendChild(createCell(""));
+    row.appendChild(createCell(""));
+    return row;
+  }
+
+  function scoreRow(category) {
+    const row = document.createElement("div");
+    row.className = "grid-row";
+
+    const categoryCell = document.createElement("div");
+    categoryCell.className = "category-cell";
+    categoryCell.innerHTML = `<span>${escapeHtml(category.label)}</span>${category.symbol ? `<span class="dice-face" aria-hidden="true">${category.symbol}</span>` : ""}`;
+    row.appendChild(categoryCell);
+
+    state.players.forEach((player, playerIndex) => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "score-cell";
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "score-button";
+      const filled = isFilled(player, category.id);
+      const value = filled ? scoreValue(player, category.id) : null;
+      button.textContent = filled ? String(value) : "–";
+      button.classList.toggle("is-filled", filled);
+      button.classList.toggle("is-zero", filled && value === 0);
+      button.setAttribute("aria-label", `${category.label}, ${player.name}: ${filled ? value : "leer"}`);
+      button.addEventListener("click", () => openScoreDialog(playerIndex, category));
+      wrapper.appendChild(button);
+      row.appendChild(wrapper);
+    });
+
+    return row;
+  }
+
+  function calculationRow(label, calculator, className) {
+    const row = document.createElement("div");
+    row.className = `grid-row ${className}`;
+    row.appendChild(createCell("", label));
+    state.players.forEach(player => row.appendChild(createCell("calculated", String(calculator(player)))));
+    return row;
+  }
+
+  function renderStatus() {
+    const totals = state.players.map(grandTotal);
+    elements.leaderScore.textContent = `${totals[0]} : ${totals[1]}`;
+    if (totals[0] === totals[1]) {
+      elements.leaderName.textContent = totals[0] === 0 ? "Noch offen" : "Gleichstand";
+      return;
+    }
+    elements.leaderName.textContent = totals[0] > totals[1] ? `${state.players[0].name} führt` : `${state.players[1].name} führt`;
+  }
+
+  function renderProgress() {
+    state.players.forEach((player, index) => {
+      const count = completed(player);
+      elements[`progressName${index}`].textContent = player.name;
+      elements[`progress${index}`].textContent = `${count} / ${maxFields}`;
+      elements[`progressBar${index}`].style.width = `${(count / maxFields) * 100}%`;
+    });
+  }
+
+  function openScoreDialog(playerIndex, category) {
+    activeEdit = { playerIndex, category };
+    const player = state.players[playerIndex];
+    elements.scorePlayerLabel.textContent = player.name;
+    elements.scoreCategoryLabel.textContent = category.label;
+    elements.scoreInput.value = isFilled(player, category.id) ? String(scoreValue(player, category.id)) : "";
+    elements.quickValues.innerHTML = "";
+    category.quick.forEach(value => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "quick-value";
+      button.textContent = String(value);
+      button.addEventListener("click", () => {
+        elements.scoreInput.value = String(value);
+        saveActiveScore();
+      });
+      elements.quickValues.appendChild(button);
+    });
+    elements.scoreDialog.showModal();
+    setTimeout(() => {
+      elements.scoreInput.focus();
+      elements.scoreInput.select();
+    }, 80);
+  }
+
+  function saveActiveScore(valueOverride) {
+    if (!activeEdit) return;
+    let raw = valueOverride ?? elements.scoreInput.value.trim();
+    if (raw === "") return;
+    const next = Math.min(999, Math.max(0, Number.parseInt(raw, 10) || 0));
+    const player = state.players[activeEdit.playerIndex];
+    if (isFilled(player, activeEdit.category.id) && scoreValue(player, activeEdit.category.id) === next) {
+      elements.scoreDialog.close();
+      return;
+    }
+    pushUndo();
+    player.scores[activeEdit.category.id] = String(next);
+    saveState();
+    elements.scoreDialog.close();
+    render();
+  }
+
+  function clearActiveScore() {
+    if (!activeEdit) return;
+    const player = state.players[activeEdit.playerIndex];
+    if (!isFilled(player, activeEdit.category.id)) {
+      elements.scoreDialog.close();
+      return;
+    }
+    pushUndo();
+    delete player.scores[activeEdit.category.id];
+    saveState();
+    elements.scoreDialog.close();
+    render();
+  }
+
+  function openSettings() {
+    document.getElementById("playerName0").value = state.players[0].name;
+    document.getElementById("playerName1").value = state.players[1].name;
+    document.getElementById("bonusSelect").value = String(state.bonusValue);
+    elements.settingsDialog.showModal();
+  }
+
+  function saveSettings() {
+    const name0 = document.getElementById("playerName0").value.trim() || "Spieler 1";
+    const name1 = document.getElementById("playerName1").value.trim() || "Spieler 2";
+    const bonusValue = Number(document.getElementById("bonusSelect").value) || 25;
+    if (name0 !== state.players[0].name || name1 !== state.players[1].name || bonusValue !== state.bonusValue) {
+      pushUndo();
+      state.players[0].name = name0;
+      state.players[1].name = name1;
+      state.bonusValue = bonusValue;
+      saveState();
+    }
+    elements.settingsDialog.close();
+    render();
+  }
+
+  function undo() {
+    const previous = undoStack.pop();
+    if (!previous) return;
+    state = JSON.parse(previous);
+    saveState();
+    elements.undoButton.disabled = undoStack.length === 0;
+    render();
+    showToast("Letzte Änderung rückgängig");
+  }
+
+  async function shareScore() {
+    const totals = state.players.map(grandTotal);
+    const text = `Yatzy – ${state.players[0].name}: ${totals[0]} Punkte, ${state.players[1].name}: ${totals[1]} Punkte.`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Yatzy Spielstand", text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        showToast("Spielstand kopiert");
+      }
+    } catch (error) {
+      if (error && error.name !== "AbortError") showToast("Teilen war nicht möglich");
+    }
+  }
+
+  function showToast(message) {
+    clearTimeout(toastTimer);
+    elements.toast.textContent = message;
+    elements.toast.classList.add("show");
+    toastTimer = setTimeout(() => elements.toast.classList.remove("show"), 1900);
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>'"]/g, character => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
+    })[character]);
+  }
+
+  document.getElementById("settingsButton").addEventListener("click", openSettings);
+  document.getElementById("saveSettingsButton").addEventListener("click", saveSettings);
+  document.getElementById("saveScoreButton").addEventListener("click", () => saveActiveScore());
+  document.getElementById("zeroScoreButton").addEventListener("click", () => saveActiveScore("0"));
+  document.getElementById("clearScoreButton").addEventListener("click", clearActiveScore);
+  document.getElementById("undoButton").addEventListener("click", undo);
+  document.getElementById("shareButton").addEventListener("click", shareScore);
+  document.getElementById("newGameButton").addEventListener("click", () => elements.confirmDialog.showModal());
+
+  elements.scoreInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      saveActiveScore();
+    }
+  });
+
+  elements.confirmDialog.addEventListener("close", () => {
+    if (elements.confirmDialog.returnValue !== "confirm") return;
+    pushUndo();
+    state.players.forEach(player => { player.scores = {}; });
+    saveState();
+    render();
+    showToast("Neue Runde gestartet");
+  });
+
+  render();
+})();
+
+</script>
+</body>
+</html>
