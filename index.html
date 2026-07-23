@@ -162,6 +162,7 @@
     .section-row > :first-child { color: var(--accent); font-size: .7rem; font-weight: 900; letter-spacing: .065em; text-transform: uppercase; }
     .category-cell { justify-content: space-between; gap: .35rem; font-size: .81rem; line-height: 1.15; }
     .category-cell .dice-face { color: var(--muted); font-size: 1.17rem; }
+    .category-cell .category-name.is-current-open { font-weight: 900; color: var(--text); }
     .score-cell { justify-content: center; padding: .27rem !important; }
     .score-button {
       width: 100%;
@@ -598,7 +599,7 @@
       <h1 class="splash-title">YATZY DUELL</h1>
       <p class="splash-subtitle">Punkte, Runden und Statistik</p>
     </div>
-    <div class="splash-version">Version 1.4.0</div>
+    <div class="splash-version">Version 1.4.2</div>
   </div>
 
   <header class="topbar">
@@ -791,7 +792,7 @@
   (() => {
     'use strict';
 
-    const APP_VERSION = '1.4.1';
+    const APP_VERSION = '1.4.2';
     const STORAGE_KEY = 'yatzy-duell-v2';
     const DEVICE_KEY = 'yatzy-duell-device-v1';
     const BONUS_LIMIT = 63;
@@ -1007,7 +1008,15 @@
     function sectionRow(label) {
       return `<div class="grid-row section-row"><div>${escapeHtml(label)}</div>${state.current.players.map(() => '<div></div>').join('')}</div>`;
     }
+    function currentPlayerIndex() {
+      const count = activeCount();
+      const filled = state.current.scores.reduce((sum, scoreObj) =>
+        sum + allCategories.reduce((n, category) => n + (hasOwn(scoreObj, category.id) ? 1 : 0), 0), 0);
+      return (state.current.starter + filled) % count;
+    }
     function scoreRow(category) {
+      const currentPlayer = currentPlayerIndex();
+      const currentOpen = !state.current.completed && !hasOwn(state.current.scores[currentPlayer], category.id);
       const cells = state.current.players.map((_,player) => {
         const scoreObj = state.current.scores[player];
         const filled = hasOwn(scoreObj, category.id);
@@ -1016,7 +1025,7 @@
         if (filled && Number(value) === 0) classes.push('is-zero');
         return `<div class="score-cell"><button class="${classes.join(' ')}" type="button" data-player="${player}" data-category="${category.id}" ${state.current.completed ? 'disabled' : ''} aria-label="${escapeHtml(state.current.players[player])}, ${escapeHtml(category.label)}">${filled ? value : '–'}</button></div>`;
       }).join('');
-      return `<div class="grid-row"><div class="category-cell"><span>${escapeHtml(category.label)}</span>${category.face ? `<span class="dice-face" aria-hidden="true">${category.face}</span>` : ''}</div>${cells}</div>`;
+      return `<div class="grid-row"><div class="category-cell"><span class="category-name${currentOpen ? ' is-current-open' : ''}">${escapeHtml(category.label)}</span>${category.face ? `<span class="dice-face" aria-hidden="true">${category.face}</span>` : ''}</div>${cells}</div>`;
     }
     function calcRow(label, values, className) {
       return `<div class="grid-row ${className}"><div>${escapeHtml(label)}</div>${values.map((value,i) => `<div class="calculated" data-player="${i}">${value}</div>`).join('')}</div>`;
