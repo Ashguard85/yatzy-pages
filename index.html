@@ -999,38 +999,56 @@
       min-height: calc(var(--gm-row) - 4px);
       height: calc(var(--gm-row) - 4px);
       border-radius: 7px;
-      font-size: clamp(.78rem, calc(var(--gm-row) * .36), 1rem);
-      line-height: 1;
+      font-size: clamp(.92rem, calc(var(--gm-row) * .52), 1.2rem);
+      font-weight: 950;
+      line-height: .96;
     }
+    /* Zahlen dürfen deutlich grösser sein als lange Kategorienamen.
+       Bei vielen Spielern wird nur so weit reduziert, dass nichts überlappt. */
+    body.game-mode .scorecard.players-2 .score-button { font-size: clamp(1rem, calc(var(--gm-row) * .64), 1.42rem); }
+    body.game-mode .scorecard.players-3 .score-button { font-size: clamp(.98rem, calc(var(--gm-row) * .60), 1.32rem); }
+    body.game-mode .scorecard.players-4 .score-button { font-size: clamp(.94rem, calc(var(--gm-row) * .56), 1.25rem); }
+    body.game-mode .scorecard.players-5 .score-button,
+    body.game-mode .scorecard.players-6 .score-button { font-size: clamp(.9rem, calc(var(--gm-row) * .52), 1.16rem); }
+
     body.game-mode .category-cell {
       gap: .22rem;
-      font-size: clamp(.7rem, calc(var(--gm-row) * .32), .88rem);
-      line-height: 1.02;
+      font-size: clamp(.78rem, calc(var(--gm-row) * .39), 1rem);
+      line-height: 1.01;
     }
-    body.game-mode .dice-face { flex: 0 0 auto; font-size: clamp(.86rem, calc(var(--gm-row) * .38), 1.12rem); }
+    body.game-mode .category-label { font-weight: 600; }
+    body.game-mode .scorecard.players-2 .category-cell { font-size: clamp(.84rem, calc(var(--gm-row) * .46), 1.08rem); }
+    body.game-mode .scorecard.players-3 .category-cell { font-size: clamp(.8rem, calc(var(--gm-row) * .42), 1.02rem); }
+    body.game-mode .scorecard.players-4 .category-cell { font-size: clamp(.77rem, calc(var(--gm-row) * .39), .98rem); }
+    body.game-mode .scorecard.players-5 .category-cell,
+    body.game-mode .scorecard.players-6 .category-cell { font-size: clamp(.73rem, calc(var(--gm-row) * .36), .92rem); }
+
+    body.game-mode .dice-face { flex: 0 0 auto; font-size: clamp(.92rem, calc(var(--gm-row) * .44), 1.2rem); }
+    body.game-mode .section-row > :first-child { font-size: clamp(.72rem, calc(var(--gm-row) * .30), .9rem); }
     body.game-mode .player-header { gap: 0; padding-left: .22rem; padding-right: .22rem; }
     body.game-mode .player-header .starter-dot {
-      min-height: clamp(.5rem, calc(var(--gm-row) * .2), .7rem);
-      font-size: clamp(.44rem, calc(var(--gm-row) * .16), .56rem);
+      min-height: clamp(.5rem, calc(var(--gm-row) * .2), .72rem);
+      font-size: clamp(.46rem, calc(var(--gm-row) * .17), .58rem);
       line-height: 1;
     }
     body.game-mode .player-header strong {
-      font-size: clamp(.7rem, calc(var(--gm-row) * .32), .9rem);
-      line-height: 1.03;
+      font-size: clamp(.78rem, calc(var(--gm-row) * .40), 1.05rem);
+      line-height: 1.01;
     }
     body.game-mode .player-header small {
-      font-size: clamp(.56rem, calc(var(--gm-row) * .22), .68rem);
+      font-size: clamp(.6rem, calc(var(--gm-row) * .25), .74rem);
       line-height: 1;
     }
     body.game-mode .scorecard.highlight-active .player-header.is-active-player strong {
-      font-size: clamp(.75rem, calc(var(--gm-row) * .35), .98rem);
+      font-size: clamp(.82rem, calc(var(--gm-row) * .44), 1.12rem);
     }
-    body.game-mode .bonus-row .calc-label-main { font-size: clamp(.76rem, calc(var(--gm-row) * .32), .92rem); }
-    body.game-mode .bonus-row .calc-label-meta { font-size: clamp(.56rem, calc(var(--gm-row) * .21), .66rem); }
-    body.game-mode .grand-row .calc-label-main { font-size: clamp(.78rem, calc(var(--gm-row) * .34), 1rem); }
-    body.game-mode .grand-row .calculated { font-size: clamp(1rem, calc(var(--gm-row) * .46), 1.38rem); line-height: 1; }
+    body.game-mode .total-row .calc-label-main { font-size: clamp(.82rem, calc(var(--gm-row) * .43), 1.08rem); }
+    body.game-mode .bonus-row .calc-label-main { font-size: clamp(.84rem, calc(var(--gm-row) * .45), 1.12rem); }
+    body.game-mode .bonus-row .calc-label-meta { font-size: clamp(.6rem, calc(var(--gm-row) * .26), .74rem); }
+    body.game-mode .grand-row .calc-label-main { font-size: clamp(.9rem, calc(var(--gm-row) * .49), 1.22rem); }
+    body.game-mode .grand-row .calculated { font-size: clamp(1.16rem, calc(var(--gm-row) * .68), 1.62rem); line-height: .96; }
     body.game-mode .total-row .calculated,
-    body.game-mode .bonus-row .calculated { font-size: clamp(.78rem, calc(var(--gm-row) * .34), 1rem); }
+    body.game-mode .bonus-row .calculated { font-size: clamp(.9rem, calc(var(--gm-row) * .54), 1.28rem); line-height: .98; }
     body.game-mode .scorecard.players-3 .grand-row .calc-label-long,
     body.game-mode .scorecard.players-4 .grand-row .calc-label-long,
     body.game-mode .scorecard.players-5 .grand-row .calc-label-long,
@@ -1359,7 +1377,7 @@
       <h1 class="splash-title">YATZY DUELL</h1>
       <p class="splash-subtitle">Punkte, Runden und Statistik</p>
     </div>
-    <div class="splash-version">Version 2.4.3</div>
+    <div class="splash-version">Version 2.4.4</div>
   </div>
 
   <header class="topbar">
@@ -1732,7 +1750,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '2.4.3';
+  const APP_VERSION = '2.4.4';
   const STORAGE_KEY = 'yatzy-duell-v2';
   const AREA_STORAGE_PREFIX = 'yatzy-duell-area-v1:';
   const DEVICE_KEY = 'yatzy-duell-device-v1';
