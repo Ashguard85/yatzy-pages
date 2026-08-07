@@ -1017,6 +1017,11 @@
       line-height: 1.01;
     }
     body.game-mode .category-label { font-weight: 600; }
+
+    /* 2.4.5: Offene Kategorien des aktiven Spielers bleiben als schnelle Orientierung fett. */
+    body.game-mode .category-label.is-current-open {
+      font-weight: 950;
+    }
     body.game-mode .scorecard.players-2 .category-cell { font-size: clamp(.84rem, calc(var(--gm-row) * .46), 1.08rem); }
     body.game-mode .scorecard.players-3 .category-cell { font-size: clamp(.8rem, calc(var(--gm-row) * .42), 1.02rem); }
     body.game-mode .scorecard.players-4 .category-cell { font-size: clamp(.77rem, calc(var(--gm-row) * .39), .98rem); }
@@ -1377,7 +1382,7 @@
       <h1 class="splash-title">YATZY DUELL</h1>
       <p class="splash-subtitle">Punkte, Runden und Statistik</p>
     </div>
-    <div class="splash-version">Version 2.4.4</div>
+    <div class="splash-version">Version 2.4.5</div>
   </div>
 
   <header class="topbar">
@@ -1750,7 +1755,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '2.4.4';
+  const APP_VERSION = '2.4.5';
   const STORAGE_KEY = 'yatzy-duell-v2';
   const AREA_STORAGE_PREFIX = 'yatzy-duell-area-v1:';
   const DEVICE_KEY = 'yatzy-duell-device-v1';
