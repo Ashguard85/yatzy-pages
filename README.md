@@ -1,4 +1,4 @@
-# Yatzy Duell · GitHub-Pages-PWA v2.6.0
+# Yatzy Duell · GitHub-Pages-PWA v2.8.0
 
 ## Ziel und Änderung gegenüber v2.5.0
 
@@ -9,7 +9,7 @@ Die PWA bleibt ein eigenständiger statischer Client. Sie enthält keine Python-
 ## Upgrade ohne Verlust lokaler Spielstände
 
 1. **WICHTIG:** Vor dem Update in der alten Yatzy-PWA unter Einstellungen eine bisherige Sicherung exportieren. Wenn mehrere Spielbereiche existieren, für jeden Bereich eine Sicherung exportieren. Das bisherige Yatzy-Backend ebenfalls sichern. **Die installierte PWA nicht löschen.**
-2. `yatzy-pages-central-v2.6.0.zip` als neues ZIP direkt in das bestehende Yatzy-GitHub-Pages-Repository importieren. Nicht manuell alte `.github/`-Dateien ersetzen. `VERSION` in GitHub muss `v2.6.0` enthalten.
+2. `yatzy-pages-central-v2.8.0.zip` als neues ZIP direkt in das bestehende Yatzy-GitHub-Pages-Repository importieren. Nicht manuell alte `.github/`-Dateien ersetzen. `VERSION` in GitHub muss `v2.8.0` enthalten.
 3. In der installierten PWA unter Setup **Auf Updates prüfen** und bei vollständig vorbereiteter Version **Jetzt aktualisieren**. Keine Neuinstallation der PWA durchführen.
 4. Beim ersten Start liest v2.6.0 die alten `localStorage`-Datensätze (`yatzy-duell-v2` und sämtliche `yatzy-duell-area-v1:*`) und überträgt sie **in einer IndexedDB-Transaktion**, einschliesslich Profilen, Spielständen, Verlauf, Bildern und Spielbereichs-Caches. Ein zusätzlicher Sicherheits-Snapshot wird in IndexedDB angelegt.
 5. **Die alten lokalen Schlüssel werden nicht gelöscht oder verändert.** Bei einer fehlgeschlagenen Migration wird der Start gestoppt; vorhandene Daten werden nicht durch einen leeren Spielstand überschrieben. Die kleinen UI-Einstellungen bleiben in `localStorage`; der grosse serverweite Profilkatalog wird in IndexedDB gespeichert.
@@ -52,7 +52,7 @@ Optional liegt `spiele-backend-docker-v1.1.zip` bei dieser Lieferung separat vor
 ## PWA, Sicherheit, Versionen
 
 - Basis: HTML/CSS/Vanilla JS, kein Framework/CDN, lokal mitgeführte Icons und Badgebilder.
-- Service Worker `v2.6.0`: Pflicht-App-Shell (`index.html`, `app.js`, `archive.js`, `app.css`, `manifest.webmanifest`) wird vor Freigabe vollständig neu geladen. Altes App-Shell-Cache bleibt als Fallback. `/api` und dynamische Dateien werden nicht aus dem Cache beantwortet. Kein automatisches `clients.claim()`, kein automatischer Reload während Bearbeitung.
+- Service Worker `v2.8.0`: Pflicht-App-Shell (`index.html`, `app.js`, `archive.js`, `app.css`, `manifest.webmanifest`) wird vor Freigabe vollständig neu geladen. Altes App-Shell-Cache bleibt als Fallback. `/api` und dynamische Dateien werden nicht aus dem Cache beantwortet. Kein automatisches `clients.claim()`, kein automatischer Reload während Bearbeitung.
 - Manuelles Update und Blockierung bei aktivem Import, Export, Formularbearbeitung und kritischem Transfer.
 - Cloudflare: `PWA_ALLOWED_ORIGIN` der gemeinsamen API enthält die exakte Pages-Origin; `OPTIONS`-Preflight für `Authorization` und Cloudflare-Header zulassen. Tokens nur in gerätelokalem IndexedDB-Vault, niemals in ZIP, HTML, SW, Git oder Backups.
 - Einschränkungen: Die übernommene historische Oberfläche verwendet teilweise Inline-CSS, weshalb `style-src 'unsafe-inline'` in der CSP enthalten ist. Die PWA ist **kein** konfliktauflösender Mehrgeräte-Sync; es gibt nur bewusste Datenübertragung. SQLite läuft nur auf dem Server.
@@ -62,3 +62,11 @@ Optional liegt `spiele-backend-docker-v1.1.zip` bei dieser Lieferung separat vor
 **Geprüft:** JavaScript-Syntax von `app.js`, `archive.js` und `sw.js`, ZIP-Archiv-Roundtrip einschliesslich Badgebildern und Verlaufbildern (CRC-32 und `unzip -t`), HTML-/DOM-ID-Referenzen, Release-ZIP-Root und SW-Pflichtdateien, Python-Syntax der optionalen Backend-Erweiterung. Keine `.git/`, `.github/`, `.gitignore` in Releases.
 
 **Hier nicht ausführbar:** echte IndexedDB-Migration mit auf dem iPhone vorhandenen Bestandsdaten, iOS-Safari-Update-Lifecycle, produktiver Node-Sync-Server, Cloudflare Access und vollständiger Flask-/Gunicorn-Laufzeittest. Der bereitgestellte Browser verweigert lokal aufgerufene Testseiten. Deshalb sind die ZIPs **Release-Kandidaten**; zuerst an einer extern gesicherten Testkopie validieren und alte Container nicht voreilig entfernen.
+
+## v2.8.0 · Server-Spielbereich und optionaler Autosave
+In Einstellungen → Spiele-Zentrale: «Serverbereiche laden», Bereich auswählen, «Gewählten Serverbereich öffnen». Vor dem lokalen Ersetzen wird eine IndexedDB-Sicherheitskopie erzeugt. Danach kann der Schalter «Änderungen automatisch ... speichern» aktiv sein. Bei einer Änderung erfolgt nach ca. 1 Sekunde ein einzelner revisionsgesicherter PUT nur für den aktiven Yatzy-Bereich. Andere Bereiche bleiben erhalten. Nach einer Unterbrechung oder wenn der Serverbereich zwischenzeitlich verändert wurde, stoppt Autosave; lokale Daten bleiben erhalten. Ein absichtlicher Bereichswechsel lädt die aktuellen Serverdaten und erfordert Bestätigung. **Keine echte Mehrgeräte-Synchronisierung, kein Offline-Retry und kein Konflikt-Merge im Hintergrund.** Nach längerer Offlinephase den Bereich auf Unterschiede prüfen. Der Server darf alte Yatzy- oder Flip-7-Daten nicht still überschreiben.
+
+## Gastmodus (nur aktuelle Sitzung)
+«Gastpartie» ermöglicht 2–6 frei eingegebene Namen. Spielerprofile und alle Yatzy-Punkte werden nur im RAM gehalten und niemals lokal oder auf dem Server gespeichert. Gastmodus im Spiel explizit beenden, um zum bisherigen regulären Spielstand zurückzukehren. Gastdaten gehen beim Schliessen oder Neuladen verloren. Manuelles Teilen eines Ergebnis-PNG ist weiterhin möglich. Während des Gastmodus sind Einstellungen und Servertransfers gesperrt.
+
+**Upgrade:** Vor dem GitHub-Import v2.8.0 lokale und zentrale Sicherung erstellen, PWA nicht deinstallieren. `VERSION`, `app.js` und `sw.js` müssen v2.8.0 anzeigen. Der gleiche Ubuntu-Server und dieselbe SQLite-Datei werden weiterverwendet.

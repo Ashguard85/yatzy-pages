@@ -1,5 +1,5 @@
 'use strict';
-const VERSION='v2.6.0', PREFIX='yatzy-central-shell-', CACHE=PREFIX+VERSION;
+const VERSION='v2.8.0', PREFIX='yatzy-central-shell-', CACHE=PREFIX+VERSION;
 const REQUIRED=['./','./index.html','./app.js','./archive.js','./app.css','./manifest.webmanifest'];
 const OPTIONAL=['./offline.html','./icons/icon-192.png','./icons/icon-512.png',
 './icons/apple-touch-icon.png','./icons/favicon-16.png','./icons/favicon-32.png',

@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '2.6.0';
+  const APP_VERSION = '2.8.0';
   const STORAGE_KEY = 'yatzy-duell-v2';
   const AREA_STORAGE_PREFIX = 'yatzy-duell-area-v1:';
   const DEVICE_KEY = 'yatzy-duell-device-v1';
@@ -218,6 +218,7 @@
     });
   }
   function persistData(entries){
+    if(guestSession)return Promise.resolve(); // Guest games never write any user data.
     if(!dataReady)return Promise.resolve();
     const job=dataWrites.then(()=>writeDataBatch(entries));
     dataWrites=job.catch(error=>{
@@ -315,6 +316,7 @@
   }
 
   function saveAreaCache(areaState, code = areaState?.areaCode) {
+    if(guestSession)return false;
     const clean = String(code || '').trim();
     if (!isValidSyncCode(clean) || !areaState || typeof areaState !== 'object') return false;
     const cached = clone(areaState);
@@ -565,6 +567,9 @@
 
   let state = loadState();
   let deviceSettings = loadDeviceSettings();
+  let guestSession=false,guestOriginalState=null,guestOriginalSettings=null;
+  let centralAutoBase=null,centralAutoCode='',centralAutoTimer=null,centralAutoPending=false;
+  let centralAutoSequence=0,centralAutoBlocked=false,centralAutoBusy=false;
   // State hydration and legacy migration occur asynchronously in boot().
   // No write to localStorage or IndexedDB before migration succeeds.
   let activeEdit = null;
@@ -587,16 +592,19 @@
   let lastAutoScrolledPlayer = '';
 
   function saveDeviceSettings() {
+    if(guestSession)return; // No guest preferences or profiles on disk.
     // Legacy credentials migrate to IndexedDB on boot; do not persist secrets in localStorage.
     const safe = {...deviceSettings, cloudflareClientId: '', cloudflareClientSecret: '', serverCatalog:null};
     try { localStorage.setItem(DEVICE_KEY, JSON.stringify(safe)); } catch (e) { console.warn('UI-Einstellungen konnten nicht gespeichert werden'); }
     if(dataReady)persistData([['meta','catalog',clone(deviceSettings.serverCatalog)]]);
   }
   function saveState({queueSync = true} = {}) {
+    if(guestSession)return; // Guest state exists in memory only.
     const copy=clone(state),code=isValidSyncCode(state.areaCode)?state.areaCode:LOCAL_AREA;
     cachedAreas.set(code,copy);
     persistData([['meta','active',copy],['areas',code,copy]]);
     if (queueSync && deviceSettings.storageMode === 'synology' && deviceSettings.autoSync) scheduleSync();
+    if (queueSync && deviceSettings.storageMode === 'central' && deviceSettings.centralAutoSave) centralScheduleAutoSave();
   }
   function markChanged({settings = false} = {}) {
     const stamp = nowIso();
@@ -1982,11 +1990,12 @@
     $('synologyPanel').classList.toggle('hidden', mode !== 'synology');
     $('centralPanel').classList.toggle('hidden', mode !== 'central');
     renderCentralSettings();
+    $('centralAutoSave').checked=Boolean(deviceSettings.centralAutoSave);
     $('storageModeNote').textContent = mode === 'local'
       ? 'Alle Daten bleiben automatisch in dieser PWA. Für einen Gerätewechsel vorher eine Sicherung exportieren.'
       : mode === 'file'
         ? 'Beim Export öffnet iOS nach Möglichkeit das Teilen-Menü. Dort kannst du «In Dateien sichern», iCloud Drive oder Synology Drive wählen.'
-        : mode === 'central' ? 'Die Daten bleiben lokal. Übertragung und Bereichswechsel erfolgen ausschliesslich manuell.'
+        : mode === 'central' ? 'Lokale IndexedDB-Sicherung bleibt aktiv. Optionales Autosave überträgt nur Änderungen des geöffneten Serverbereichs (kein Sync).'
         : 'Die alte Yatzy-Synchronisierung bleibt vorerst verfügbar.';
     const serverProfileCount = deviceSettings.serverCatalog?.profiles?.length || 0;
     const mergedIdentityCount = Number(deviceSettings.serverCatalog?.identityMergeCount || 0);
@@ -2728,6 +2737,7 @@
     }
   }
   async function syncNow({silent = false} = {}) {
+    if(guestSession){if(!silent)toast('Gastpartien werden niemals synchronisiert');return false;}
     if (syncInProgress) return false;
     readSyncForm();
     if (!validateServerSettings({requireCode: true})) return false;
@@ -2927,7 +2937,7 @@ async function pwaCheckUpdate(){
 }
 async function pwaApplyUpdate() {
   // Prevent activation when a game/transfer/form/dialog is being edited.
-  if(!dataReady||completeBusy||dataFailure||centralBusy||syncInProgress||pendingImport||activeEdit||document.querySelector('dialog[open]')||
+  if(!dataReady||guestSession||centralAutoBusy||centralAutoPending||completeBusy||dataFailure||centralBusy||syncInProgress||pendingImport||activeEdit||document.querySelector('dialog[open]')||
      ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) {
     $('pwaUpdateStatus').textContent='Update bereit – aktuelle Bearbeitung zuerst abschliessen';
     return;
@@ -2996,6 +3006,168 @@ async function pwaApplyUpdate() {
   }
   function centralAreaCode() {
     return String($('centralArea')?.value || deviceSettings.centralCode || state.areaCode || 'familie').trim();
+  }
+  function centralAutoStatus(message){
+    const el=$('centralAutoStatus');if(el)el.textContent=message;
+  }
+  function centralDisarm(reason){
+    if(centralAutoTimer)clearTimeout(centralAutoTimer);
+    centralAutoTimer=null;centralAutoBase=null;centralAutoCode='';centralAutoBlocked=true;
+    if(reason)centralAutoStatus(reason);
+  }
+  function centralAutoArmed(){return !guestSession&&!centralAutoBlocked&&!centralAutoBusy&&Boolean(centralAutoBase)&&deviceSettings.centralAutoSave&&deviceSettings.storageMode==='central'&&state.areaCode===centralAutoCode;}
+  function centralScheduleAutoSave(){
+    if(guestSession||!deviceSettings.centralAutoSave||deviceSettings.storageMode!=='central')return;
+    centralAutoPending=true;centralAutoSequence++;
+    if(!centralAutoBase||centralAutoBlocked){centralAutoStatus('Nur lokal gespeichert. Server-Autosave pausiert: Serverbereich öffnen und prüfen.');return;}
+    clearTimeout(centralAutoTimer);
+    centralAutoStatus('Lokaler Stand gesichert · Serverspeicherung vorbereitet …');
+    centralAutoTimer=setTimeout(()=>centralRunAutoSave(),1000);
+  }
+  async function centralRunAutoSave(){
+    if(guestSession||centralAutoBusy||!centralAutoPending||!centralAutoBase||centralAutoBlocked||deviceSettings.storageMode!=='central')return false;
+    if(state.areaCode!==centralAutoCode){centralDisarm('Bereich gewechselt – Server-Autosave gestoppt.');return false;}
+    centralAutoBusy=true;clearTimeout(centralAutoTimer);centralAutoTimer=null;
+    const sequence=centralAutoSequence,code=centralAutoCode,localSnapshot=clone(state),baseline=centralAutoBase;
+    try{
+      await flushData();
+      const server=await centralGetDoc(),remote=server.doc.areas[code]||null;
+      // A changed server area must NEVER be overwritten automatically.
+      if(JSON.stringify(remote)!==baseline){centralDisarm('Konflikt: Serverbereich wurde auf einem anderen Gerät geändert. Keine Überschreibung. Lokale Punkte bleiben erhalten.');return false;}
+      const next=clone(server.doc);next.areas[code]=localSnapshot;
+      const newRevision=await centralPutDoc(server,next);
+      centralAutoBase=JSON.stringify(localSnapshot);
+      centralLastDoc={revision:newRevision,doc:next};
+      centralAutoStatus(`Im Serverbereich «${code}» gespeichert · Revision ${newRevision}`);
+      if(centralAutoSequence===sequence)centralAutoPending=false;
+      return true;
+    }catch(e){
+      centralDisarm('Server-Autosave angehalten: '+(e.message||'Übertragung fehlgeschlagen')+'. Änderungen bleiben lokal. Manuell erneut prüfen.');
+      return false;
+    }finally{
+      centralAutoBusy=false;
+      if(centralAutoPending&&!centralAutoBlocked&&centralAutoSequence!==sequence&&deviceSettings.centralAutoSave)centralScheduleAutoSave();
+    }
+  }
+  async function centralFlushAutoSave(){
+    if(centralAutoBusy)throw Error('Server-Autosave läuft. Vorgang danach wiederholen.');
+    if(centralAutoPending){
+      if(centralAutoBlocked||!centralAutoBase)throw Error('Es gibt nicht übertragene lokale Änderungen. Erst Serverspeicherung reparieren oder lokale Sicherung exportieren.');
+      const ok=await centralRunAutoSave();if(!ok)throw Error('Nicht alle Änderungen konnten auf den Server geschrieben werden.');
+    }
+  }
+  function centralFillAreaSelect(doc){
+    const el=$('centralServerAreas'),prior=el.value||deviceSettings.centralCode||'';
+    const codes=Object.keys(doc.areas||{}).sort((a,b)=>a.localeCompare(b,'de-CH'));
+    el.innerHTML='<option value="">Serverbereich auswählen</option>'+codes.map(code=>`<option value="${escapeHtml(code)}">${escapeHtml(code)} · ${Array.isArray(doc.areas[code]?.history)?doc.areas[code].history.length:0} Partien</option>`).join('');
+    if(codes.includes(prior))el.value=prior;
+  }
+  async function centralLoadAreas(){
+    return centralWithBusy(async()=>{
+      const server=await centralGetDoc();centralLastDoc=server;
+      centralFillAreaSelect(server.doc);
+      centralSetStatus(`${Object.keys(server.doc.areas).length} Serverbereiche geladen · Revision ${server.revision}`);
+    });
+  }
+  async function centralOpenServerArea(){
+    return centralWithBusy(async()=>{
+      await centralFlushAutoSave();
+      const code=$('centralServerAreas').value||centralCurrentArea();
+      if(!isValidSyncCode(code))throw Error('Spielbereich auswählen (3–40 Zeichen)');
+      const server=await centralGetDoc(),raw=server.doc.areas[code]||null;
+      const prompt=raw?`Serverbereich «${code}» öffnen? ${centralAreaSummary(raw)}. Vorhandene lokale Änderungen im aktiven Bereich werden vorher in IndexedDB gesichert.`:
+        `«${code}» existiert noch nicht. Leeren Serverbereich vorbereiten? Er wird erst beim ersten Speichern angelegt.`;
+      if(!confirm(prompt))return;
+      await centralMakeSafetyCopy('before-area-switch');
+      centralDisarm('Serverbereich wird geöffnet …');
+      if(isValidSyncCode(state.areaCode))saveAreaCache(state,state.areaCode);
+      state=raw?normalizeState(raw):makeEmptyAreaState(code);
+      state.areaCode=code;
+      deviceSettings.centralCode=code;
+      $('centralArea').value=code;
+      centralAutoBase=JSON.stringify(raw);
+      centralAutoCode=code;
+      centralAutoBlocked=false;centralAutoPending=false;
+      centralLastDoc=server;
+      saveState({queueSync:false});saveDeviceSettings();renderAll();
+      centralAutoStatus(deviceSettings.centralAutoSave?`Serverbereich «${code}» geöffnet. Nächste Änderung wird automatisch gespeichert.`:`Bereich «${code}» geöffnet. Autosave ausgeschaltet.`);
+      centralSetStatus(`Serverbereich «${code}» aktiv · Revision ${server.revision}`);
+      toast('Spielbereich geöffnet');
+    });
+  }
+  async function centralSetAutoSave(enabled){
+    if(guestSession){toast('Im Gastmodus ist Server-Autosave gesperrt');$('centralAutoSave').checked=false;return;}
+    deviceSettings.centralAutoSave=enabled;saveDeviceSettings();
+    if(!enabled){centralDisarm('Automatische Serverspeicherung ausgeschaltet.');centralAutoPending=false;return;}
+    centralAutoStatus('Automatisches Speichern aktiviert. Bitte einen Serverbereich öffnen.');
+    // Do not arm based on stale local data, especially after a long offline session.
+    centralDisarm('Bitte Serverbereich laden und öffnen, um automatische Speicherung sicher zu starten.');
+  }
+  async function centralRetryAutoSave(){
+    if(guestSession)return;
+    if(!centralAutoPending){centralAutoStatus('Keine ausstehenden Änderungen gemeldet.');return;}
+    if(!centralAutoBase){centralAutoStatus('Keine überprüfte Serverbasis. Lokale Daten zuerst als ZIP sichern, dann Serverbereich öffnen.');return;}
+    centralAutoBlocked=false;
+    const ok=await centralRunAutoSave();
+    if(!ok)toast('Nicht gespeichert. Lokale Kopie bleibt erhalten.');
+  }
+  async function centralRecoverAutoSave(){
+    if(!deviceSettings.centralAutoSave||deviceSettings.storageMode!=='central'||guestSession)return;
+    if(!isValidSyncCode(state.areaCode)||state.areaCode!==deviceSettings.centralCode){centralDisarm('Autosave nach Neustart: bitte Serverbereich öffnen.');return;}
+    try{
+      const server=await centralGetDoc(),raw=server.doc.areas[state.areaCode]||null;
+      centralLastDoc=server;centralFillAreaSelect(server.doc);
+      if(JSON.stringify(raw)!==JSON.stringify(state)){
+        centralDisarm('Lokaler Spielstand weicht vom Server ab. Keine automatische Überschreibung; bitte Daten prüfen und Bereich erneut öffnen.');return;
+      }
+      centralAutoBase=JSON.stringify(raw);centralAutoCode=state.areaCode;centralAutoBlocked=false;centralAutoPending=false;
+      centralAutoStatus(`Server-Autosave bereit · Bereich «${centralAutoCode}»`);
+    }catch(e){centralDisarm('Offline/Verbindung gestört. Lokal nutzbar; nach Wiederherstellung Serverbereich überprüfen.');}
+  }
+  function renderGuestNames(){
+    const count=Number($('guestCount').value)||2;
+    const el=$('guestNames'),old=[...el.querySelectorAll('input')].map(x=>x.value);
+    el.innerHTML=Array.from({length:count},(_,i)=>`<label class="form-field">Gast ${i+1}<input class="text-input guest-name" maxlength="32" autocomplete="off" placeholder="Name ${i+1}" value="${escapeHtml(old[i]||'')}"></label>`).join('');
+  }
+  function openGuestDialog(){
+    $('guestCount').value=String(guestSession?state.current.players.length:2);
+    $('guestNames').innerHTML='';renderGuestNames();
+    if(guestSession)state.current.players.forEach((name,i)=>{const inputs=$('guestNames').querySelectorAll('input');if(inputs[i])inputs[i].value=name;});
+    $('guestDialog').showModal();
+  }
+  async function createGuestGame(){
+    const names=[...$('guestNames').querySelectorAll('input')].map(x=>safeName(x.value,''));
+    if(names.length<2||names.length>6||names.some(x=>!x)){toast('Bitte für jeden Gast einen Namen eingeben');return;}
+    if(new Set(names.map(x=>x.toLocaleLowerCase('de-CH'))).size!==names.length){toast('Jeder Gast benötigt einen eigenen Namen');return;}
+    if(!guestSession){
+      if(centralBusy||syncInProgress||completeBusy){toast('Übertragung läuft. Bitte zuerst abschliessen.');return;}
+      try{await centralFlushAutoSave();await flushData();}catch(e){toast('Vor dem Gastmodus bitte ausstehende Serveränderungen klären: '+e.message);return;}
+      if(!confirm('Gastmodus starten? Die reguläre Partie bleibt gespeichert; die Gastpartie wird niemals gespeichert.'))return;
+      guestOriginalState=state;guestOriginalSettings=clone(deviceSettings);
+    }
+    if(syncTimer){clearTimeout(syncTimer);syncTimer=null;}
+    guestSession=true;
+    const temp=makeNewState(),stamp=nowIso();
+    temp.profiles=names.map(n=>makeProfile(n,stamp));
+    temp.areaCode='';temp.history=[];temp.undo=[];
+    temp.settings.playerCount=names.length;
+    temp.settings.selectedProfileIds=temp.profiles.map(x=>x.id);
+    temp.current.playerIds=[...temp.settings.selectedProfileIds];
+    temp.current.players=[...names];temp.current.scores=emptyScores(names.length);
+    temp.current.yatzyFaces=emptyYatzyFaces(names.length);
+    state=temp;
+    $('guestDialog').close();
+    setGameMode(false);activatePage('game');renderAll();
+    toast('Gastpartie gestartet – keine Speicherung');
+  }
+  function exitGuestMode(){
+    if(!guestSession)return;
+    if(!confirm('Gastmodus beenden? Alle Gastnamen, Punkte und Gastpartien gehen endgültig verloren.'))return;
+    guestSession=false;state=guestOriginalState;guestOriginalState=null;
+    if(guestOriginalSettings)deviceSettings=guestOriginalSettings;
+    guestOriginalSettings=null;
+    renderAll();activatePage('game');
+    toast('Regulärer Spielstand wiederhergestellt');
   }
   function renderCentralSettings() {
     if (!$('centralUrl')) return;
@@ -3108,19 +3280,144 @@ async function pwaApplyUpdate() {
     mergeCatalogProfiles(profiles,{});
     saveDeviceSettings();
   }
+
+  function centralMergeCandidates(doc) {
+    // The central player register is game-specific. Never touch the global /api/v1/players table.
+    return centralCollectProfiles(doc).profiles.sort((a,b)=>a.name.localeCompare(b.name,'de-CH')||a.id.localeCompare(b.id));
+  }
+  function centralPopulateMergeOptions(doc) {
+    const profiles=centralMergeCandidates(doc);
+    const countById=new Map();
+    Object.values(doc.areas||{}).forEach(area=>{
+      const seen=new Map();
+      for(const game of [area.current,...(area.history||[])]) {
+        if(!game || !Array.isArray(game.playerIds)) continue;
+        for(const id of new Set(game.playerIds)) seen.set(id,(seen.get(id)||0)+1);
+      }
+      for(const [id,n] of seen)countById.set(id,(countById.get(id)||0)+n);
+    });
+    const options='<option value="">Profil auswählen</option>'+profiles.map(p=>
+      `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} · ${countById.get(p.id)||0} Partien · ${escapeHtml(p.id.slice(-8))}</option>`).join('');
+    for(const id of ['centralMergeSource','centralMergeTarget']){
+      const el=$(id),selected=el.value;el.innerHTML=options;
+      if(profiles.some(p=>p.id===selected))el.value=selected;
+    }
+    $('centralMergeStatus').textContent=`${profiles.length} serverseitige Yatzy-Profile geladen. Quelle und Hauptprofil auswählen.`;
+  }
+  function remapDuplicateArea(raw,sourceId,targetId,targetName,targetProfile,code) {
+    const area=clone(raw);let references=0,completed=0;
+    for(const game of [area.current,...(area.history||[])]){
+      if(!game || !Array.isArray(game.playerIds))continue;
+      if(game.playerIds.includes(sourceId)&&game.playerIds.includes(targetId))
+        throw Error(`Spielbereich «${code}»: Quelle und Ziel waren in derselben Partie. Manuelle Prüfung nötig; nichts zusammengeführt.`);
+      if(game.playerIds.includes(sourceId)){
+        game.playerIds=game.playerIds.map((id,index)=>{
+          if(id===sourceId){if(Array.isArray(game.players))game.players[index]=targetName;references++;}return id===sourceId?targetId:id;
+        });
+        if(game.finishedAt)completed++;
+      }
+    }
+    if(Array.isArray(area.settings?.selectedProfileIds))
+      area.settings.selectedProfileIds=[...new Set(area.settings.selectedProfileIds.map(id=>id===sourceId?targetId:id))];
+    const original=Array.isArray(area.profiles)?area.profiles:[];
+    area.profiles=original.filter(p=>p.id!==sourceId);
+    if((original.some(p=>p.id===sourceId)||references)&&!area.profiles.some(p=>p.id===targetId))
+      area.profiles.push(clone(targetProfile));
+    if(references||original.some(p=>p.id===sourceId))area.updatedAt=nowIso();
+    return {area,references,completed};
+  }
+  function prepareDuplicateMerge(doc,local,sourceId,targetId){
+    if(sourceId===targetId)throw Error('Quelle und Ziel müssen verschieden sein');
+    const profiles=centralMergeCandidates(doc);
+    const source=profiles.find(p=>p.id===sourceId),target=profiles.find(p=>p.id===targetId);
+    if(!source||!target)throw Error('Beide Profile müssen im Server vorhanden sein');
+    const canonicalId=id=>{
+      let current=id;const visited=new Set();
+      while(doc.profileAliases?.[current]&&!visited.has(current)){
+        visited.add(current);current=doc.profileAliases[current];
+      }
+      return current;
+    };
+    if(canonicalId(targetId)===sourceId||canonicalId(sourceId)===targetId)
+      throw Error('Eine bestehende Alias-Zuordnung verweist auf eines der Profile. Bitte zuerst prüfen.');
+    const next=clone(doc),localNext=new Map();let refs=0,finished=0,serverAreas=0;
+    for(const [code,area] of Object.entries(next.areas||{})){
+      const m=remapDuplicateArea(area,sourceId,targetId,target.name,target,code);
+      next.areas[code]=m.area;refs+=m.references;finished+=m.completed;
+      if(m.references||JSON.stringify(area.profiles)!==JSON.stringify(m.area.profiles))serverAreas++;
+    }
+    // Check every local area BEFORE changing the server: same-match collision aborts the whole operation.
+    for(const [code,area] of local){
+      const m=remapDuplicateArea(area,sourceId,targetId,target.name,target,code);
+      localNext.set(code,m.area);
+    }
+    const list=Array.isArray(next.registryProfiles)?next.registryProfiles:[];
+    next.registryProfiles=list.filter(p=>p.id!==sourceId);
+    if(!next.registryProfiles.some(p=>p.id===targetId))next.registryProfiles.push(clone(target));
+    const aliases={...(next.profileAliases||{})};
+    for(const [key,value] of Object.entries(aliases))if(value===sourceId)aliases[key]=targetId;
+    aliases[sourceId]=targetId;next.profileAliases=aliases;
+    return {next,localNext,source,target,refs,finished,serverAreas};
+  }
+  async function centralLoadMergeCandidates(){
+    return centralWithBusy(async()=>{
+      const server=await centralGetDoc();centralLastDoc=server;
+      centralPopulateMergeOptions(server.doc);
+      centralSetStatus(`Profile der Serverrevision ${server.revision} geladen`);
+    });
+  }
+  async function centralMergeProfiles(){
+    return centralWithBusy(async()=>{
+      if(deviceSettings.storageMode!=='central')throw Error('Zuerst Spiele-Zentrale auswählen');
+      const sourceId=$('centralMergeSource').value,targetId=$('centralMergeTarget').value;
+      if(!sourceId||!targetId)throw Error('Quelle und Hauptprofil auswählen');
+      await flushData();
+      const server=await centralGetDoc();
+      const local=allLocalAreas();
+      const prepared=prepareDuplicateMerge(server.doc,local,sourceId,targetId);
+      const details=`«${prepared.source.name}» (${sourceId.slice(-8)}) → «${prepared.target.name}» (${targetId.slice(-8)})\n`+
+        `${prepared.serverAreas} betroffene Serverbereiche · ${prepared.refs} Spielzuordnungen (${prepared.finished} abgeschlossene Partien)\n`+
+        `Die Quelle wird aus den Profilregistern entfernt und als Alias hinterlegt. Alle Daten bleiben in der Yatzy-Spielhistorie.\n`+
+        `Bitte vorher ein EXTERNES Komplettbackup herunterladen. Ein Serverbackup wird vor dem Schreiben erzeugt.\n\n`+
+        `Zum Fortfahren exakt ZUSAMMENFÜHREN eingeben:`;
+      if(prompt(details,'')!=='ZUSAMMENFÜHREN')return;
+      if(!confirm(`LETZTE BESTÄTIGUNG\n${prepared.source.name} wird in ${prepared.target.name} zusammengeführt.\nFortfahren?`))return;
+      await saveSafetySnapshot('before-profile-merge');
+      const newRevision=await centralPutDoc(server,prepared.next);
+      // The server has committed. All corresponding IndexedDB areas are written in one transaction.
+      const activeKey=isValidSyncCode(state.areaCode)?state.areaCode:LOCAL_AREA;
+      const writes=[...prepared.localNext].map(([code,area])=>['areas',code,area]);
+      const newActive=prepared.localNext.get(activeKey)||state;
+      const newRegistry=mergeProfiles(globalProfiles.filter(p=>p.id!==sourceId),prepared.next.registryProfiles);
+      const newAliases={...legacyProfileAliases,...prepared.next.profileAliases};
+      writes.push(['meta','active',newActive],['meta','registry',{profiles:newRegistry,aliases:newAliases}]);
+      try{await writeDataBatch(writes);}catch(e){
+        throw Error(`Server wurde auf Revision ${newRevision} geändert, aber lokale Speicherung schlug fehl. Nicht erneut übertragen! Bitte zuerst Serverdaten vollständig lokal übernehmen. ${e.message}`);
+      }
+      cachedAreas.clear();for(const [code,area] of prepared.localNext)cachedAreas.set(code,clone(area));
+      state=normalizeState(newActive);globalProfiles=newRegistry;legacyProfileAliases=newAliases;
+      centralLastDoc={revision:newRevision,doc:prepared.next};
+      centralUseCatalog(prepared.next);renderAll();
+      $('centralMergeStatus').textContent=`Zusammengeführt: ${prepared.source.name} → ${prepared.target.name}. Serverrevision ${newRevision}.`;
+      centralSetStatus('Spielerprofile bereinigt · Revision '+newRevision);
+      toast('Profile zusammengeführt. Statistiken und alte Partien prüfen.');
+    });
+  }
+
   function centralSetStatus(message){$('centralStatus').textContent=message;}
   async function centralWithBusy(fn) {
+    if(guestSession){toast('Gastpartien werden nicht übertragen. Gastmodus zuerst beenden.');return;}
     if(centralBusy){toast('Eine Datenübertragung läuft bereits');return;}
     centralBusy=true;
-    for(const id of ['centralUpload','centralDownload','centralRefresh','centralMigrateLegacy','centralUploadAll','centralDownloadAll','legacyDownloadLocal']) $(id).disabled=true;
+    for(const id of ['centralUpload','centralDownload','centralRefresh','centralMigrateLegacy','centralUploadAll','centralDownloadAll','legacyDownloadLocal','centralMergeLoad','centralMergeProfiles']) $(id).disabled=true;
     try{return await fn();}
     catch(e){centralSetStatus(e.message||'Fehler');toast(e.message||'Vorgang fehlgeschlagen');}
-    finally {centralBusy=false;for(const id of ['centralUpload','centralDownload','centralRefresh','centralMigrateLegacy','centralUploadAll','centralDownloadAll','legacyDownloadLocal'])$(id).disabled=false;}
+    finally {centralBusy=false;for(const id of ['centralUpload','centralDownload','centralRefresh','centralMigrateLegacy','centralUploadAll','centralDownloadAll','legacyDownloadLocal','centralMergeLoad','centralMergeProfiles'])$(id).disabled=false;}
   }
   async function centralTest() {
     return centralWithBusy(async()=>{
       const data=centralReadDoc(await centralFetch(CENTRAL_PATH));
-      centralLastDoc=data;
+      centralLastDoc=data;centralFillAreaSelect(data.doc);
       centralSetStatus(`API verbunden · Revision ${data.revision} · ${Object.keys(data.doc.areas).length} Serverbereiche`);
       toast('Spiele-Zentrale erreichbar. Zugang kann jetzt gespeichert werden.');
     });
@@ -3128,13 +3425,14 @@ async function pwaApplyUpdate() {
   async function centralRefresh() {
     return centralWithBusy(async()=>{
       const doc=await centralGetDoc();centralLastDoc=doc;
-      centralUseCatalog(doc.doc);renderAll();
+      centralUseCatalog(doc.doc);renderAll();centralFillAreaSelect(doc.doc);
       const summary=Object.entries(doc.doc.areas).map(([code,s])=>`${code}: ${s.history?.length||0} Partien`).join(' · ');
       centralSetStatus(`Serverrevision ${doc.revision} · ${summary||'Noch keine Bereiche'}`);
       toast('Serverbereiche und Badge-Auswertung geladen');
     });
   }
   function centralChooseArea() {
+    centralDisarm('Lokaler Bereichswechsel: Server-Autosave pausiert. Bitte Serverbereich neu öffnen.');
     try {
       const code=centralCurrentArea();
       if(code===(state.areaCode||deviceSettings.centralCode)) {toast('Bereich bereits ausgewählt');return;}
@@ -3152,6 +3450,7 @@ async function pwaApplyUpdate() {
   }
   async function centralUpload() {
     return centralWithBusy(async()=>{
+      await centralFlushAutoSave();centralDisarm('Manuelle Übertragung: Serverbereich neu öffnen, um Autosave zu reaktivieren.');
       const code=centralCurrentArea();
       const server=await centralGetDoc();
       const local=state.areaCode===code?normalizeState(state):loadAreaCache(code);
@@ -3171,6 +3470,7 @@ async function pwaApplyUpdate() {
   }
   async function centralDownload() {
     return centralWithBusy(async()=>{
+      await centralFlushAutoSave();centralDisarm('Manueller Download: Serverbereich neu öffnen, um Autosave zu reaktivieren.');
       const code=centralCurrentArea();
       const server=await centralGetDoc(),remote=server.doc.areas[code];
       if(!remote)throw new Error(`Bereich «${code}» ist auf dem Server nicht vorhanden.`);
@@ -3460,6 +3760,7 @@ async function pwaApplyUpdate() {
   }
 
   function scheduleSync() {
+    if(guestSession)return;
     if (!deviceSettings.syncCode) return;
     clearTimeout(syncTimer);
     syncTimer = setTimeout(() => syncNow({silent: true}), 1000);
@@ -3697,6 +3998,7 @@ async function pwaApplyUpdate() {
     scrollActivePlayerIntoView(currentPlayerIndex(), {force: true});
   }
   function activatePage(page) {
+    if(guestSession && page!=='game'){toast('Gastmodus: keine Profile, Statistik oder Serveränderungen. Gastmodus zuerst beenden.');return;}
     if (deviceSettings.gameMode && page !== 'game') setGameMode(false);
     document.querySelectorAll('.page').forEach(element => element.classList.toggle('active', element.dataset.page === page));
     document.querySelectorAll('.nav-button').forEach(element => element.classList.toggle('active', element.dataset.target === page));
@@ -3706,7 +4008,14 @@ async function pwaApplyUpdate() {
     if (page === 'history') renderHistory();
     if (page === 'settings') renderSettings();
   }
-  function renderAll() { renderGame(); renderStats(); renderBadges(); renderHistory(); renderSettings(); }
+  function renderAll() {
+    $('guestStart').classList.toggle('hidden',guestSession);
+    $('guestExit').classList.toggle('hidden',!guestSession);
+    $('guestNotice').classList.toggle('hidden',!guestSession);
+    if(guestSession)$('storageNote').textContent='Gastpartie: keine automatische Speicherung';
+    else $('storageNote').textContent='Die Partie wird lokal gespeichert'+(deviceSettings.storageMode==='central'&&deviceSettings.centralAutoSave?' und bei aktivem Server-Autosave auch im Serverbereich.':'.');
+    renderGame(); renderStats(); renderBadges(); renderHistory(); renderSettings();
+  }
   function formatDate(value) {
     try { return new Intl.DateTimeFormat('de-CH', {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(value)); }
     catch { return value || '–'; }
@@ -3834,6 +4143,17 @@ async function pwaApplyUpdate() {
   $('centralUpload').addEventListener('click', centralUpload);
   $('centralDownload').addEventListener('click', centralDownload);
   $('centralRefresh').addEventListener('click', centralRefresh);
+  $('centralLoadAreas').addEventListener('click',centralLoadAreas);
+  $('centralOpenServerArea').addEventListener('click',centralOpenServerArea);
+  $('centralAutoSave').addEventListener('change',e=>centralSetAutoSave(e.target.checked));
+  $('centralRetryAutoSave').addEventListener('click',centralRetryAutoSave);
+  $('guestStart').addEventListener('click',openGuestDialog);
+  $('guestExit').addEventListener('click',exitGuestMode);
+  $('guestCount').addEventListener('change',renderGuestNames);
+  $('guestCancel').addEventListener('click',()=>$('guestDialog').close());
+  $('guestCreate').addEventListener('click',createGuestGame);
+  $('centralMergeLoad').addEventListener('click',centralLoadMergeCandidates);
+  $('centralMergeProfiles').addEventListener('click',centralMergeProfiles);
   $('centralBackup').addEventListener('click', exportData);
   $('centralMigrateLegacy').addEventListener('click', centralMigrateLegacy);
   $('completeBackupExport').addEventListener('click', completeExport);
@@ -3971,6 +4291,7 @@ async function pwaApplyUpdate() {
     await hydrateLocalData();
     await centralLoadCredentials();
     renderAll();
+    if(deviceSettings.storageMode==='central'&&deviceSettings.centralAutoSave)centralRecoverAutoSave();
     setGameMode(deviceSettings.gameMode);
     setupPwa();
     setupSwUpdates();

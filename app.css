@@ -1362,3 +1362,9 @@
 #centralPanel details summary { cursor:pointer; font-weight:650; }
 #centralPanel details .form-field { margin-top:.75rem; }
 #centralPanel .sync-actions button { min-width:0; }
+
+/* Guest sessions: clear in-memory status, no persistence. */
+#guestNotice{background:#fff3da;color:#654b21;border:1px solid #dfc88e;border-radius:12px;padding:12px;}
+.guest-fields{display:grid;grid-template-columns:1fr;gap:8px;margin:10px 0 18px;}
+#guestDialog .modal-card{max-height:85dvh;overflow:auto;}
+#centralAutoStatus{font-weight:600;}
